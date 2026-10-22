@@ -1,0 +1,44 @@
+{
+  "name": "helios-fullstack",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n WEB,API \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "vite --host 0.0.0.0 --port 4173",
+    "dev:api": "node --watch server/index.js",
+    "start": "node server/start.js",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "test": "node --test server/tests/*.test.js",
+    "db:check": "node server/scripts/check-db.js",
+    "seed": "node server/scripts/seed.js",
+    "admin:invite": "node server/scripts/admin-invite.js"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": "^0.468.0",
+    "react-router-dom": "^7.9.0",
+    "express": "^5.1.0",
+    "mongoose": "^8.19.0",
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "helmet": "^8.1.0",
+    "express-rate-limit": "^8.1.0",
+    "zod": "^4.1.0",
+    "dotenv": "^17.2.2",
+    "nodemailer": "^7.0.6"
+  },
+  "devDependencies": {
+    "vite": "^6.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.2.1",
+    "supertest": "^7.1.4"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

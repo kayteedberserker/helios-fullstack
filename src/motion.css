@@ -1,0 +1,77 @@
+/* A continuous SVG layer joins the sections; content always sits above it. */
+.page-scene{position:relative;isolation:isolate;overflow:clip}
+.page-scene section{position:relative}
+.page-scene section>.container,.page-scene footer>.container{position:relative;z-index:2}
+.page-threads{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.thread-track{stroke:#d0d8df;stroke-width:1;opacity:.65}
+.thread-progress{stroke:#087af5;stroke-width:1.5;opacity:.33}
+.thread-packet{stroke:#087af5;stroke-width:2;stroke-linecap:round;stroke-dasharray:45 955;opacity:.75;animation:thread-travel var(--packet-duration,18s) linear var(--packet-delay,0s) infinite}
+.thread-continue .thread-track{opacity:.35}
+.thread-continue .thread-packet{opacity:.45;stroke-dasharray:16 984}
+.thread-app .thread-track{stroke:#b4cfee;opacity:.8}
+.thread-app .thread-packet{stroke-width:1.7;opacity:.65;stroke-dasharray:75 925}
+@keyframes thread-travel{from{stroke-dashoffset:1000}to{stroke-dashoffset:0}}
+
+/* Cards sit on independently defined lanes; they never determine a path. */
+.loose-section{background:#f7f8f6;padding-top:100px;padding-bottom:90px}
+.loose-layout{display:block}
+.loose-layout>.section-heading{max-width:100%;display:grid;grid-template-columns:1.15fr 1fr;column-gap:100px}
+.loose-layout>.section-heading .eyebrow{grid-column:1 / -1}
+.loose-layout>.section-heading .section-description{margin-top:0;align-self:center}
+.notification-field{height:var(--field-height,510px);position:relative;margin-top:28px}
+.thread-notification{position:absolute;left:var(--card-x);top:var(--card-y);width:255px;max-width:29%;margin-left:0;translate:-50% 0}
+.thread-notification .loose-card{margin:0;padding:18px 16px;background:#fffffff5;border:1px solid #e6e9ec;box-shadow:0 12px 38px #234c6f0b;transform:none;border-radius:17px;gap:11px}
+.thread-notification .loose-card p{font-size:.875rem;line-height:1.55}
+.thread-notification .app-icon{width:39px;height:39px;border-radius:11px;flex-shrink:0}
+.thread-notification .notification-time{font-size:.625rem}
+@keyframes notification-float{0%,100%{translate:0 0}50%{translate:0 -8px}}
+.product-section{padding-top:125px}
+.product-copy{background:linear-gradient(90deg,#fff 92%,#ffffff00);padding-block:15px}
+.phone-label,.phone-footnote{position:relative;background:#fff;padding:4px 10px;border-radius:100px}
+.phone{position:relative;box-shadow:0 30px 70px #113e6821,0 4px 12px #113e680b}
+.phone::after{content:'';position:absolute;inset:0;border-radius:34px;pointer-events:none;box-shadow:inset 0 0 0 1px #ffffff40}
+.messages .message{animation:bubble-arrive .55s cubic-bezier(.22,1,.36,1) calc(var(--message-index) * .17s) both;transform-origin:bottom left}
+.messages .message.user{transform-origin:bottom right}
+@keyframes bubble-arrive{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.assistant-avatar{box-shadow:0 5px 17px #087af532}
+.use-case-card,.plan,.integration{position:relative}
+.use-case-card:hover .feature-icon{transform:translateY(-3px) rotate(-5deg)}
+.feature-icon{transition:transform .3s ease}
+.use-case-card:hover .mini-conversation span:first-child{transform:translateX(-4px)}
+.mini-conversation span{transition:transform .3s ease}
+.customer-card{background:var(--paper)}
+.faq-list{background:var(--paper)}
+
+/* The hub connects to every integration tile in the SVG layer. */
+.integration-network{position:relative;padding-top:0;margin:55px auto 0;max-width:900px}
+.integration-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:24px;background:#087af5;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:0 10px 30px #087af526}
+.integration-hub span{font-size:.6875rem;font-weight:650;letter-spacing:.01em}
+.integration-hub::before,.integration-hub::after{content:'';position:absolute;inset:-9px;border:1px solid #087af51f;border-radius:31px;animation:hub-ripple 4s ease-out infinite;pointer-events:none}
+.integration-hub::after{animation-delay:2s}
+@keyframes hub-ripple{0%{transform:scale(.9);opacity:0}25%{opacity:1}100%{transform:scale(1.4);opacity:0}}
+.integration-network .integration-grid{margin-top:0;position:relative;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:200px;row-gap:18px}
+.integration{box-shadow:0 7px 20px #174f8705;transition:box-shadow .25s,border-color .25s;display:grid;grid-template-columns:50px 1fr;column-gap:16px;text-align:left;padding:20px 24px;min-height:92px}
+.integration .app-icon{grid-row:1 / 3;margin-bottom:0}
+.integration>span:last-child{grid-column:2;margin-top:3px}
+.integration:hover{transform:translateY(-5px);box-shadow:0 15px 30px #174f8710;border-color:#89bdf8}
+.integration .app-icon{transition:transform .3s ease}
+.integration:hover .app-icon{transform:scale(1.1) rotate(-4deg)}
+.closing-section{overflow:hidden}
+.closing-section::before,.closing-section::after{content:'';position:absolute;width:580px;height:580px;right:-270px;top:-360px;border:1px solid #ffffff23;border-radius:50%;pointer-events:none}
+.closing-section::after{width:730px;height:730px;right:-330px;top:-440px}
+
+/* Progressive enhancement: content is visible unless the observer is ready. */
+.will-reveal{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.22,1,.36,1) var(--reveal-delay,0ms),transform .7s cubic-bezier(.22,1,.36,1) var(--reveal-delay,0ms)}
+.will-reveal.is-visible{opacity:1;transform:translateY(0)}
+.thread-notification.will-reveal,.integration.will-reveal{transform:none}
+.integration.will-reveal.is-visible:hover{transform:translateY(-5px)}
+.hero-kicker{animation:hero-arrive .75s ease both}
+.hero h1{animation:hero-arrive .85s cubic-bezier(.22,1,.36,1) .1s both}
+.hero-description{animation:hero-arrive .85s cubic-bezier(.22,1,.36,1) .22s both}
+.hero-button,.hero-note{animation:hero-arrive .85s cubic-bezier(.22,1,.36,1) .32s both}
+@keyframes hero-arrive{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1000px){.loose-layout>.section-heading{column-gap:40px}.thread-notification{width:220px;max-width:30%}.thread-notification .loose-card{padding:15px 12px}.thread-notification .notification-time{display:none}.thread-notification .app-icon{width:34px;height:34px}.integration-network .integration-grid{column-gap:150px}.integration{padding:18px;column-gap:12px}}
+@media(max-width:760px){.loose-section{padding-top:70px;padding-bottom:25px}.loose-layout>.section-heading{display:block}.loose-layout>.section-heading .section-description{margin-top:20px;max-width:500px}.notification-field{height:calc(var(--card-count,4) * 135px + 70px);margin-top:30px}.thread-notification{width:230px;max-width:70%}.thread-notification .loose-card{padding:16px 14px}.thread-notification .app-icon{width:39px;height:39px}.thread-track{opacity:.4}.thread-progress{opacity:.2}.thread-packet{opacity:.45}.product-section{padding-top:90px}.product-copy{background:#fff}.integration-network{padding-top:0;margin-top:35px}.integration-network .integration-grid{column-gap:100px;row-gap:16px}.integration-hub{width:70px;height:70px;border-radius:22px}.integration-hub::before,.integration-hub::after{border-radius:29px}.integration{display:flex;flex-direction:column;text-align:center;padding:23px 12px;min-height:140px}.integration .app-icon{margin-bottom:14px}}
+@media(max-width:460px){.thread-notification{width:220px;max-width:78%}.notification-field{height:calc(var(--card-count,4) * 130px + 50px)}.integration-network{padding-top:0}.integration-network .integration-grid{column-gap:80px;row-gap:14px}.thread-app .thread-packet{opacity:.4}.integration-hub{width:58px;height:66px;border-radius:19px}.integration-hub span{font-size:.625rem}.integration{padding:22px 6px}.integration strong{font-size:.8125rem}.integration>span:last-child{font-size:.6875rem}}
+@media(prefers-reduced-motion:reduce){.will-reveal{opacity:1!important;transform:none!important;transition:none!important}.thread-packet{display:none}.thread-progress{stroke-dashoffset:0!important}.thread-notification .loose-card{translate:none!important}.integration-hub::before,.integration-hub::after{animation:none;opacity:.5}.hero-kicker,.hero h1,.hero-description,.hero-button,.hero-note,.messages .message{opacity:1;transform:none;animation:none!important}}

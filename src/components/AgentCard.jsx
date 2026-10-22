@@ -1,0 +1,5 @@
+import { Bot, Brain, BriefcaseBusiness, Compass, PenLine, Sparkles } from 'lucide-react';
+import { Badge, Button } from './ui.jsx';
+const icons = { Bot, Brain, BriefcaseBusiness, Compass, PenLine, Sparkles };
+export function AgentIcon({ template, size = 24 }) { const Icon = icons[template?.icon] || Sparkles; return <span className={`hx-agent-icon hx-${template?.color || 'blue'}`}><Icon size={size} /></span>; }
+export default function AgentCard({ template, onSelect, admin = false }) { return <article className="hx-agent-card"><div className="hx-agent-card-top"><AgentIcon template={template} /><Badge status={admin && !template.published ? 'neutral' : 'blue'}>{admin && !template.published ? 'Unpublished' : template.category}</Badge></div><h3>{template.name}</h3><p>{template.description}</p><ul>{template.features.map(feature => <li key={feature}><span />{feature}</li>)}</ul><Button variant="secondary" onClick={() => onSelect(template)}>{admin ? 'Edit speciality' : 'Meet this agent'}<Sparkles size={15} /></Button></article>; }
