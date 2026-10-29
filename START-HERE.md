@@ -1,3 +1,7 @@
+# Vercel deployment update
+
+For your Vercel deployment, follow **VERCEL-SETUP.md** first. This full folder now includes the Vercel API entry point, API-first routing, and startup/request logs. Keep your working local .env for laptop development; set production values in Vercel separately.
+
 # Start the complete updated Helios project
 
 This folder already contains the landing page, authentication, customer and admin dashboards, payments and agent code, database diagnostics, and the new human-support chat. You do not need to merge any source files from the smaller support-update ZIP.
@@ -19,6 +23,6 @@ Support messages are saved in MongoDB and written by your admin team. No new API
 
 The folder includes every source file, package.json, package-lock.json, public assets, server models, routes, services, scripts, tests, shared files, README, and environment templates. Generated builds and node_modules are omitted; npm install regenerates dependencies.
 
-Automated checks: 44 tests passed, and both real-API and demo frontend builds passed. Live MongoDB transactions and browser visual checks were not run in this environment. README contains the full configuration and deployment instructions.
+Automated checks: 49 tests passed, and both real-API and demo frontend builds passed. Live MongoDB transactions and browser visual checks were not run in this environment. README contains the full configuration and deployment instructions.
 
 The uploaded archive contains starter/demo environment settings. Copy the working `.env` from your current local project before starting the real app.

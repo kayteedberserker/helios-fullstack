@@ -19,7 +19,7 @@ import { adminRoutes } from './routes/admin.js';
 import { supportRoutes, adminSupportRoutes } from './routes/support.js';
 import { mongoSupportStore } from './services/support-store.js';
 
-export function createApp({ config, models = defaultModels, gateway = createPaystack(config.paystackSecret), ai = createAI(config), settlementStore = mongoSettlementStore(models), supportStore = mongoSupportStore(models) }) {
+export function createApp({ config, serveStatic = config.production, models = defaultModels, gateway = createPaystack(config.paystackSecret), ai = createAI(config), settlementStore = mongoSettlementStore(models), supportStore = mongoSupportStore(models) }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
@@ -59,7 +59,7 @@ export function createApp({ config, models = defaultModels, gateway = createPays
   app.use('/api/admin/support', adminSupportRoutes(dependencies));
   app.use('/api/admin', adminRoutes(dependencies));
   app.use('/api', (req, res) => res.status(404).json({ message: 'API route not found.' }));
-  if (config.production) {
+  if (serveStatic) {
     const dist = fileURLToPath(new URL('../dist/', import.meta.url));
     app.use(express.static(dist));
     // Express 5 uses a named wildcard. This also serves direct React Router URLs.

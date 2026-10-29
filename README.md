@@ -1,5 +1,7 @@
 # Helios — React, Express & MongoDB
 
+**Vercel deployment:** This version includes a Vite frontend plus an Express Node function. Follow [VERCEL-SETUP.md](VERCEL-SETUP.md) for project settings, environment variables, health checks and logs.
+
 A complete first version of an AI-agent storefront and workspace. The existing cream, blue, and white landing page remains at `/`, with eight independent curved lines and the app hub graphic. Customer and administrator screens use sidebars. This is plain React + Vite, with React Router; it does not use Next.js.
 
 The published private preview runs in **demo mode**. The downloadable project includes the real Express backend. Demo data and sample AI replies live only in the browser. There are no real accounts, emails, AI calls, or charges in the preview.
