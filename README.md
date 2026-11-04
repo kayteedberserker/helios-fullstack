@@ -1,4 +1,6 @@
-# Helios — React, Express & MongoDB
+# Nooky — React, Express & MongoDB
+
+**Latest update:** See [NOOKY-SETUP.md](NOOKY-SETUP.md) for the identity change, Google customer sign-in and linking, and Paystack diagnostics.
 
 **Vercel deployment:** This version includes a Vite frontend plus an Express Node function. Follow [VERCEL-SETUP.md](VERCEL-SETUP.md) for project settings, environment variables, health checks and logs.
 
@@ -16,10 +18,10 @@ The published private preview runs in **demo mode**. The downloadable project in
 - One personal agent per customer: speciality selection, name, tone, custom instructions, pause/resume, saved chat, and monthly response quotas.
 - An OpenAI-compatible chat-completions adapter. Provider secrets stay on the server.
 - Admin overview, paginated/searchable users, suspend/reactivate controls, admin invitations, agent speciality creation/editing, plan editing, payment history, and CSV export of the current page.
-- Paystack hosted USD checkout, server-side verification, signed raw-body webhooks, and transactional, idempotent access activation.
+- Paystack hosted NGN checkout, server-side verification, signed raw-body webhooks, and transactional, idempotent access activation.
 - MongoDB models, indexes, connection setup, repeatable seed command, initial admin invitation command, environment templates, and automated tests.
 
-This release helps with plans, drafts, writing, and ideas inside Helios. Gmail, WhatsApp, Slack, calendar connections, background automations, and external actions are **planned**, not implemented. The landing page marks the app hub accordingly. Customer stories are labelled sample content and should be replaced before launch.
+This release helps with plans, drafts, writing, and ideas inside Nooky. Gmail, WhatsApp, Slack, calendar connections, background automations, and external actions are **planned**, not implemented. The landing page marks the app hub accordingly. Customer stories are labelled sample content and should be replaced before launch.
 
 ## Requirements
 
@@ -119,36 +121,13 @@ Or fill `INITIAL_ADMIN_EMAIL` and run `npm run admin:invite`. The command prints
 
 There are no default real admin credentials or public role-elevation endpoints. Existing admins can create further invitations under **Users → Invite administrator**. Invitations are not automatically emailed; share the generated link privately. Use a different email from an existing customer account.
 
-## 4. Configure Paystack USD payments
+## 4. Configure Paystack NGN payments
 
-The integration uses hosted checkout, so card details never enter your application. No Paystack public key is needed for this flow; the server uses `PAYSTACK_SECRET_KEY`.
+New checkout charges Nigerian naira in kobo. Set PAYSTACK_SECRET_KEY to your sk_test_ secret key for testing. Run npm run payments:check to initialize a ₦50 test checkout. This takes no payment.
 
-USD support depends on merchant country and approval. Paystack currently supports USD collection/settlement for Nigerian and Kenyan businesses. Nigerian USD settlement requires an approved Zenith Bank USD domiciliary account. Enable international payments and USD before switching to live keys. A customer holding a USD card is not sufficient to enable USD prices on a merchant account.
+Read NOOKY-SETUP.md before deploying. Existing USD plan prices are archived, and paid plans are paused until you set explicit NGN monthly/yearly prices and publish them in Admin → Agents & plans. The application never applies an assumed exchange rate. Prices in the admin form are naira; the backend stores kobo. Historical payment snapshots and purchased access are preserved, and revenue reports do not sum different currencies.
 
-Official references:
-
-- https://support.paystack.com/en/articles/2130690
-- https://paystack.com/docs/payments/accept-payments/
-- https://paystack.com/docs/payments/verify-payments/
-- https://paystack.com/docs/payments/webhooks/
-
-Use test keys first. In the Paystack dashboard, set your webhook to:
-
-```text
-https://your-api-or-website-domain.com/api/payments/webhook
-```
-
-That endpoint needs public HTTPS access. A localhost callback can be tested in a browser; localhost webhooks require an HTTPS tunnel or a deployed test API. The callback URL is generated from `CLIENT_URL`:
-
-```text
-https://your-frontend-domain.com/payment/callback
-```
-
-Amounts are stored in cents, always taken from the server's Plan record. Checkout snapshots the plan name, price, currency, response allowance, customer, and period. Browser values cannot change the amount. Verification checks provider status, reference, amount, currency, and customer email. Webhooks authenticate the original bytes using HMAC-SHA512 and are independently verified with Paystack. Both callback and webhook use the same settlement service.
-
-Payment success and subscription updates commit in one MongoDB transaction. A repeated callback or webhook cannot grant access twice. Verified failed or abandoned payments are recorded as failed. Provider timeouts and other incomplete payments remain pending and can be rechecked from the return page; admins cannot manually mark records paid. Refunds and disputes are handled in the merchant dashboard; automated refund/dispute entitlement changes and a refund API are not part of this first version.
-
-Paid access is purchased for **30 or 365 days**, with **manual renewal**. There are no automatic recurring charges. Renewing the same active plan extends its expiry; switching plans starts a new period immediately, without proration. Expired paid access falls back to Free. Usage resets on the first day of the calendar month, UTC, independent of the purchase date. Existing purchases retain their saved response allowance when an admin edits a plan.
+Keep NODEJS_HELPERS=0 on Vercel. The webhook is /api/payments/webhook and the payment return page is /payment/callback. Checkout remains server-priced, signature-verified and replay-safe. Access is manually renewed after 30 or 365 days. Google and the rest of the deployment settings stay the same.
 
 ## 5. Configure AI and email
 
@@ -201,7 +180,7 @@ Schemas and indexes are in `server/models/index.js`:
 | Model | Purpose |
 | --- | --- |
 | User | Identity, hashed password, role, status, timezone, session version |
-| Plan | USD prices, response limits, features, publication |
+| Plan | NGN prices, response limits, features, publication |
 | AgentTemplate | Speciality, starter prompts, private system instructions |
 | AgentInstance | One customer's agent, settings, state, conversation lease |
 | Subscription | Current access period and saved allowance |
@@ -213,13 +192,13 @@ Schemas and indexes are in `server/models/index.js`:
 | AdminInvite | Email-bound, hashed, expiring invitation |
 | PasswordReset | Hashed, expiring recovery token |
 
-API groups: `/api/auth`, `/api/account`, `/api/agent`, `/api/payments`, `/api/support`, and `/api/admin` (including `/api/admin/support`). `/api/catalog` is public; `/api/health` reports database readiness. Browser mutations send `X-Helios-Client: 1`; authenticated mutations additionally send the CSRF token from login or `/auth/me`. Session JWTs live in HttpOnly cookies, not localStorage. Server secrets and full provider responses are not returned to the browser.
+API groups: `/api/auth`, `/api/account`, `/api/agent`, `/api/payments`, `/api/support`, and `/api/admin` (including `/api/admin/support`). `/api/catalog` is public; `/api/health` reports database readiness. Browser mutations send `X-Nooky-Client: 1`; authenticated mutations additionally send the CSRF token from login or `/auth/me`. Session JWTs live in HttpOnly cookies, not localStorage. Server secrets and full provider responses are not returned to the browser.
 
 `src/lib/api.js` chooses the real API or the explicitly labelled preview adapter according to `VITE_DEMO_MODE` (demo by default; explicitly set `false` for the real API). `src/lib/demo.js` contains the fictional demo records and sample reply; it is not used for authentication or payments in real mode.
 
 ## Human support chat
 
-Customers can use **Contact us** in the workspace header after signing in, including on mobile. The modal shows saved conversations with the Helios team, not AI replies. Support is available on every plan and does not consume AI response quotas. No new environment variables, email service, or dependencies are required.
+Customers can use **Contact us** in the workspace header after signing in, including on mobile. The modal shows saved conversations with the Nooky team, not AI replies. Support is available on every plan and does not consume AI response quotas. No new environment variables, email service, or dependencies are required.
 
 Administrators use **Support** in the sidebar or header to open `/admin/support`. The inbox has name/email search, All / Awaiting reply / Unread / Resolved filters, pagination, message history, replies, and Resolve / Reopen controls. The sidebar/header badge counts conversations that are unread or awaiting a reply, without counting the same conversation twice. Users receive an unread badge when an admin replies.
 
@@ -245,7 +224,7 @@ The simplest deployment is one Node.js service serving both the API and React bu
 6. Run `npm start` as the start command. It sets production mode and serves `dist/` plus `/api`.
 7. Set `API_PORT` to the port your Node host expects. A host-supplied `PORT` value takes precedence automatically.
 8. Set `TRUST_PROXY` to the exact number of trusted reverse proxies in front of Express, usually 1 on managed Node hosts.
-9. Set Paystack's public HTTPS webhook URL and verify the merchant's USD configuration using test payments before using live keys.
+9. Set Paystack's public HTTPS webhook URL and verify the merchant's NGN configuration using test payments before using live keys.
 
 Express serves `index.html` for frontend deep links using its Express 5 named wildcard, while unknown `/api` URLs remain JSON 404s. A `_redirects` file is also included for static hosts that support it. With another static host, configure its SPA fallback so refreshing `/app/agent` works.
 
@@ -260,7 +239,7 @@ npm test
 npm run build
 ```
 
-The tests cover password hashing and byte limits, session cookies, role escalation prevention, session invalidation, CSRF/origin checks, payment ownership, server-sourced USD prices, email-bound single-use admin invitations, separate login roles, agent ownership, raw webhook authentication, amount/currency/customer mismatches, replay-safe settlement, renewal periods, demo account/agent/chat/admin flows, CSV formula escaping, support ownership and roles, reply flows, bounded read cursors, retry idempotency, transactional rollback, resolution conflicts, and history pagination.
+The tests cover password hashing and byte limits, session cookies, role escalation prevention, session invalidation, CSRF/origin checks, payment ownership, server-sourced NGN prices, email-bound single-use admin invitations, separate login roles, agent ownership, raw webhook authentication, amount/currency/customer mismatches, replay-safe settlement, renewal periods, demo account/agent/chat/admin flows, CSV formula escaping, support ownership and roles, reply flows, bounded read cursors, retry idempotency, transactional rollback, resolution conflicts, and history pagination.
 
 Tests use injected repositories for API authorization, payment service, and support transaction checks; they do not claim to run a live MongoDB transaction or live gateway charge. With your credentials, additionally verify signup, a single-use admin invitation, password reset email, real AI chat, a Paystack test checkout, duplicate webhook delivery, and MongoDB settlement against a test database. Automated checks and builds are included; browser visual QA was unavailable in the build environment.
 

@@ -11,7 +11,8 @@ export function readConfig(env = process.env) {
   return {
     production, clientUrl, port: Number(env.PORT || env.API_PORT || 4000), mongoUri: env.MONGODB_URI || '',
     jwtSecret: env.JWT_SECRET || '', cookieName: 'helios_session', sameSite,
-    trustProxy: Number(env.TRUST_PROXY || 0), paystackSecret: env.PAYSTACK_SECRET_KEY || '',
+    trustProxy: Number(env.TRUST_PROXY || 0), paystackSecret: (env.PAYSTACK_SECRET_KEY || '').trim(),
+    googleClientId: (env.GOOGLE_CLIENT_ID || '').trim(), googleClientSecret: (env.GOOGLE_CLIENT_SECRET || '').trim(),
     aiKey: env.AI_API_KEY || '', aiBaseUrl: (env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, ''),
     aiModel: env.AI_MODEL || 'gpt-4.1-mini',
     smtp: { host: env.SMTP_HOST || '', port: Number(env.SMTP_PORT || 587), secure: env.SMTP_SECURE === 'true', user: env.SMTP_USER || '', pass: env.SMTP_PASSWORD || '', from: env.SMTP_FROM || '' },

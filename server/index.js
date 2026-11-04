@@ -18,12 +18,12 @@ try {
   await Promise.all(Object.values(models).map(model => model.init()));
   phase = 'loading the starting catalogue';
   await seedCatalog(models);
-  const server = createApp({ config }).listen(config.port, () => console.log(`Helios API listening on port ${config.port}.`));
+  const server = createApp({ config }).listen(config.port, () => console.log(`Nooky API listening on port ${config.port}.`));
   const shutdown = () => server.close(async () => { await mongoose.disconnect(); process.exit(0); });
   process.once('SIGINT', shutdown); process.once('SIGTERM', shutdown);
 } catch (error) {
   // Only configuration errors are printed directly; driver details stay private.
-  console.error(phase === 'configuration' ? `Helios configuration: ${error.message}` : formatDatabaseError(error, phase));
+  console.error(phase === 'configuration' ? `Nooky configuration: ${error.message}` : formatDatabaseError(error, phase));
   await mongoose.disconnect().catch(() => {});
   process.exitCode = 1;
 }

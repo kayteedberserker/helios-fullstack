@@ -45,6 +45,8 @@ test('the Vercel handler preserves raw webhook bytes for signature verification'
 });
 test('deployment routes prioritize the API over files and the React fallback', async () => {
   const config = JSON.parse(await readFile(new URL('../../vercel.json', import.meta.url)));
+  assert.equal(typeof config.functions['api/index.js'].includeFiles, 'string');
+  assert.equal(typeof config.functions['api/index.js'].excludeFiles, 'string');
   const [api, files, spa] = config.routes;
   assert.equal(new RegExp(`^${api.src}$`).test('/api/auth/me'), true);
   assert.equal(new RegExp(`^${api.src}$`).test('/api/payments/webhook'), true);

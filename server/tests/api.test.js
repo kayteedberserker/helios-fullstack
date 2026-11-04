@@ -13,7 +13,7 @@ const user = { _id: '000000000000000000000021', name: 'Maya', email: 'maya@examp
 const csrf = 'this-is-a-test-csrf-secret';
 function cookie(version = 0) { return `helios_session=${jwt.sign({ ver: version, csrf }, config.jwtSecret, { subject: user._id, expiresIn: '1h', issuer: 'helios-api', audience: 'helios-web' })}`; }
 function makeApp(overrides = {}) { return createApp({ config, models: { User: { findById: async () => user }, ...overrides.models }, gateway: overrides.gateway, settlementStore: overrides.settlementStore }); }
-function writeHeaders(req, token = csrf) { return req.set('Cookie', cookie()).set('Origin', config.clientUrl).set('X-Helios-Client', '1').set('X-CSRF-Token', token); }
+function writeHeaders(req, token = csrf) { return req.set('Cookie', cookie()).set('Origin', config.clientUrl).set('X-Nooky-Client', '1').set('X-CSRF-Token', token); }
 
 test('private user and administrator routes require a valid session', async () => {
   const app = makeApp();
@@ -31,20 +31,20 @@ test('password changes and suspensions invalidate existing sessions', async () =
 test('mutations reject a missing or wrong CSRF secret and foreign origins', async () => {
   const app = makeApp();
   assert.equal((await writeHeaders(request(app).post('/api/auth/logout'), 'wrong').send({})).status, 403);
-  assert.equal((await request(app).post('/api/auth/logout').set('Cookie', cookie()).set('X-Helios-Client', '1').set('X-CSRF-Token', csrf).set('Origin', 'https://other.example.com').send({})).status, 403);
+  assert.equal((await request(app).post('/api/auth/logout').set('Cookie', cookie()).set('X-Nooky-Client', '1').set('X-CSRF-Token', csrf).set('Origin', 'https://other.example.com').send({})).status, 403);
   const good = await writeHeaders(request(app).post('/api/auth/logout')).send({}); assert.equal(good.status, 200); assert.match(good.headers['set-cookie'][0], /Expires=/);
 });
 test('public signup rejects injected admin privileges before any database write', async () => {
-  const response = await request(makeApp()).post('/api/auth/signup').set('X-Helios-Client', '1').send({ name: 'Maya', email: 'maya@example.com', password: 'a-long-enough-password', role: 'admin' });
+  const response = await request(makeApp()).post('/api/auth/signup').set('X-Nooky-Client', '1').send({ name: 'Maya', email: 'maya@example.com', password: 'a-long-enough-password', role: 'admin' });
   assert.equal(response.status, 400);
 });
 test('login issues an HttpOnly session and separates customer and admin entry points', async () => {
   const secret = 'a-long-enough-test-password';
   const record = { ...user, passwordHash: await hashPassword(secret) };
   const app = makeApp({ models: { User: { findById: async () => record, findOne: () => ({ select: async () => record }) } } });
-  const response = await request(app).post('/api/auth/login').set('X-Helios-Client', '1').send({ email: user.email, password: secret });
+  const response = await request(app).post('/api/auth/login').set('X-Nooky-Client', '1').send({ email: user.email, password: secret });
   assert.equal(response.status, 200); assert.equal(response.body.user.role, 'user'); assert.ok(response.body.csrf); assert.equal(response.body.user.passwordHash, undefined); assert.match(response.headers['set-cookie'][0], /HttpOnly/);
-  const admin = await request(app).post('/api/auth/admin/login').set('X-Helios-Client', '1').send({ email: user.email, password: secret });
+  const admin = await request(app).post('/api/auth/admin/login').set('X-Nooky-Client', '1').send({ email: user.email, password: secret });
   assert.equal(admin.status, 401);
 });
 test('admin signup requires an email-bound invitation that cannot be reused', async () => {
@@ -61,9 +61,9 @@ test('admin signup requires an email-bound invitation that cannot be reused', as
   } });
   try {
     const body = { name: 'Invited Admin', email: address, password: 'a-long-enough-password', token };
-    const other = await request(app).post('/api/auth/admin/signup').set('X-Helios-Client', '1').send({ ...body, email: 'other@example.com' }); assert.equal(other.status, 403);
-    const valid = await request(app).post('/api/auth/admin/signup').set('X-Helios-Client', '1').send(body); assert.equal(valid.status, 201); assert.equal(valid.body.user.role, 'admin');
-    const replay = await request(app).post('/api/auth/admin/signup').set('X-Helios-Client', '1').send(body); assert.equal(replay.status, 403); assert.equal(created, 1);
+    const other = await request(app).post('/api/auth/admin/signup').set('X-Nooky-Client', '1').send({ ...body, email: 'other@example.com' }); assert.equal(other.status, 403);
+    const valid = await request(app).post('/api/auth/admin/signup').set('X-Nooky-Client', '1').send(body); assert.equal(valid.status, 201); assert.equal(valid.body.user.role, 'admin');
+    const replay = await request(app).post('/api/auth/admin/signup').set('X-Nooky-Client', '1').send(body); assert.equal(replay.status, 403); assert.equal(created, 1);
   } finally { mongoose.connection.transaction = original; }
 });
 test('customers cannot choose an agent owner and admins cannot use the customer agent API', async () => {
@@ -78,13 +78,24 @@ test('payment verification is scoped to the authenticated owner', async () => {
   const response = await writeHeaders(request(app).post('/api/payments/verify')).send({ reference });
   assert.equal(response.status, 404); assert.equal(String(filter.userId), user._id); assert.equal(verified, false);
 });
-test('checkout uses the server price in USD cents, never a browser amount', async () => {
+test('checkout uses the server price in NGN kobo, never a browser amount', async () => {
   let initialised, saved;
-  const plan = { _id: '000000000000000000000002', code: 'pro', name: 'Pro', monthlyPrice: 2500, yearlyPrice: 25000, responseLimit: 1000 };
+  const plan = { _id: '000000000000000000000002', code: 'pro', name: 'Pro', currency: 'NGN', monthlyPrice: 500000, yearlyPrice: 5000000, responseLimit: 1000 };
   const app = makeApp({ models: { Plan: { findOne: async () => plan }, Payment: { create: async data => { saved = data; return data; } } }, gateway: { initialise: async data => { initialised = data; return { authorization_url: 'https://checkout.paystack.com/test-checkout' }; } } });
   const forged = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'monthly', amount: 1 }); assert.equal(forged.status, 400);
   const valid = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'yearly' });
-  assert.equal(valid.status, 201); assert.equal(initialised.amount, 25000); assert.equal(initialised.currency, 'USD'); assert.equal(saved.amount, 25000); assert.equal(initialised.callback_url, `${config.clientUrl}/payment/callback`);
+  assert.equal(valid.status, 201); assert.equal(initialised.amount, 5000000); assert.equal(initialised.currency, 'NGN'); assert.equal(saved.amount, 5000000); assert.equal(initialised.callback_url, `${config.clientUrl}/payment/callback`);
+});
+test('new checkout refuses dollar plans, unconfirmed naira prices, and amounts below the NGN minimum', async () => {
+  let writes = 0, requests = 0;
+  const plan = { _id: '000000000000000000000002', code: 'pro', name: 'Pro', currency: 'USD', monthlyPrice: 2500, yearlyPrice: 25000, responseLimit: 1000 };
+  const app = makeApp({ models: { Plan: { findOne: async () => plan }, Payment: { create: async data => { writes++; return data; } } }, gateway: { initialise: async () => { requests++; } } });
+  for (const change of [{ currency: 'USD' }, { currency: 'NGN', pricingNeedsReview: true }, { currency: 'NGN', pricingNeedsReview: false, monthlyPrice: 4999 }]) {
+    Object.assign(plan, change);
+    const response = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'monthly' });
+    assert.equal(response.status, 400);
+  }
+  assert.equal(writes, 0); assert.equal(requests, 0);
 });
 test('the raw webhook route rejects altered bytes and accepts authentic events', async () => {
   let count = 0;

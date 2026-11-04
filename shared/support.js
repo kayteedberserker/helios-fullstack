@@ -16,7 +16,7 @@ export function supportThreadView(thread, role) {
 }
 export function supportMessageView(message) {
   return { _id: String(message._id), sequence: message.sequence, senderCount: message.senderCount,
-    senderRole: message.senderRole, senderName: message.senderRole === 'admin' ? 'Helios support' : message.senderName,
+    senderRole: message.senderRole, senderName: message.senderRole === 'admin' ? 'Nooky support' : message.senderName,
     content: message.content, clientId: message.clientId, createdAt: message.createdAt };
 }
 export function supportStats(threads) {

@@ -15,7 +15,7 @@ try {
   phase = 'checking the database topology';
   assertDatabaseTopology(await mongoose.connection.db.admin().command({ hello: 1 }));
   console.log('Replica-set / sharded-cluster check passed.');
-  phase = 'checking read access to the Helios database';
+  phase = 'checking read access to the Nooky database';
   await mongoose.connection.db.collection('plans').findOne({}, { projection: { _id: 1 } });
   console.log('Database read access passed. No data was written.');
   console.log('Run npm run dev next. Startup also checks index creation and catalogue writes.');

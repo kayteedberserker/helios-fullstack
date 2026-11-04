@@ -18,7 +18,7 @@ export function adminRoutes({ models, config, auth }) {
     const month = new Date(`${usageBucket()}-01T00:00:00.000Z`);
     const [users, agents, revenue, responses, recentPayments, events] = await Promise.all([
       models.User.countDocuments({ role: 'user' }), models.AgentInstance.countDocuments({ status: 'active' }),
-      models.Payment.aggregate([{ $match: { status: 'success', paidAt: { $gte: month } } }, { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }]),
+      models.Payment.aggregate([{ $match: { status: 'success', currency: 'NGN', paidAt: { $gte: month } } }, { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }]),
       models.Usage.aggregate([{ $match: { bucket: usageBucket() } }, { $group: { _id: null, total: { $sum: '$responses' } } }]),
       models.Payment.find({ status: 'success' }).populate('userId', 'name email').sort({ paidAt: -1 }).limit(5).lean(),
       models.Activity.find().populate('userId', 'name').sort({ createdAt: -1 }).limit(6).lean(),
@@ -76,8 +76,8 @@ export function adminRoutes({ models, config, auth }) {
     const current = await models.Plan.findById(id);
     if (!current) throw new HttpError(404, 'Plan not found.');
     if (current.code === 'free' && (data.monthlyPrice !== 0 || data.yearlyPrice !== 0 || !data.published)) throw new HttpError(400, 'The free plan must stay available with a zero price.');
-    if (current.code !== 'free' && (data.monthlyPrice <= 0 || data.yearlyPrice <= 0)) throw new HttpError(400, 'Paid plans need positive monthly and yearly prices.');
-    const plan = await models.Plan.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true });
+    if (current.code !== 'free' && (data.monthlyPrice < 5000 || data.yearlyPrice < 5000)) throw new HttpError(400, 'Paid plans need NGN prices of at least ₦50.00 for each period.');
+    const plan = await models.Plan.findByIdAndUpdate(id, { $set: { ...data, currency: 'NGN', pricingNeedsReview: false } }, { new: true, runValidators: true });
     await activity(models, req.user._id, 'admin', `The ${plan.name} plan was updated.`, req.user._id);
     res.json({ plan });
   });

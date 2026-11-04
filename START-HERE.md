@@ -1,8 +1,16 @@
+# NGN currency update
+
+Read NOOKY-SETUP.md. After restarting or redeploying, set your monthly and yearly naira prices in Admin → Agents & plans and publish Pro/Max. Existing USD plan prices are archived and paid checkout is paused until you confirm NGN prices. No exchange rate has been assumed.
+
+# Nooky setup update
+
+Read **NOOKY-SETUP.md** first for Google credentials, account linking and the Paystack test command. This is the complete project with Vercel support. Keep your working local environment values and append GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.
+
 # Vercel deployment update
 
 For your Vercel deployment, follow **VERCEL-SETUP.md** first. This full folder now includes the Vercel API entry point, API-first routing, and startup/request logs. Keep your working local .env for laptop development; set production values in Vercel separately.
 
-# Start the complete updated Helios project
+# Start the complete updated Nooky project
 
 This folder already contains the landing page, authentication, customer and admin dashboards, payments and agent code, database diagnostics, and the new human-support chat. You do not need to merge any source files from the smaller support-update ZIP.
 

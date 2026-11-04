@@ -37,7 +37,7 @@ export function requireAuth({ config, models }) {
     if (!objectId.safeParse(payload.sub).success) throw new HttpError(401, 'Invalid session.');
     const user = await models.User.findById(payload.sub);
     if (!user || user.sessionVersion !== payload.ver) throw new HttpError(401, 'Please sign in again.');
-    if (user.status !== 'active') throw new HttpError(403, 'Your account is suspended. Contact the Helios team.');
+    if (user.status !== 'active') throw new HttpError(403, 'Your account is suspended. Contact the Nooky team.');
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !equalSecret(req.get('x-csrf-token'), payload.csrf)) throw new HttpError(403, 'Please refresh the page and try again.');
     req.user = user; req.csrf = payload.csrf; next();
   };
@@ -53,7 +53,7 @@ export function requireUser(req, res, next) {
 export function clientRequestGuard(config) {
   return (req, res, next) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
-    if (req.get('x-helios-client') !== '1' || (req.get('origin') && req.get('origin') !== config.clientUrl)) throw new HttpError(403, 'Request origin is not allowed.');
+    if ((req.get('x-nooky-client') !== '1' && req.get('x-helios-client') !== '1') || (req.get('origin') && req.get('origin') !== config.clientUrl)) throw new HttpError(403, 'Request origin is not allowed.');
     next();
   };
 }

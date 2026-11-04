@@ -2,9 +2,9 @@ import { HttpError } from '../lib/security.js';
 
 export function createAI(config) {
   return async ({ template, agent, messages, prompt }) => {
-    if (!config.aiKey) throw new HttpError(503, 'Your AI service is not configured yet. Contact the Helios team.');
+    if (!config.aiKey) throw new HttpError(503, 'Your AI service is not configured yet. Contact the Nooky team.');
     const system = [
-      `You are ${agent.name}, an AI assistant on Helios. ${template.systemPrompt}`,
+      `You are ${agent.name}, an AI assistant on Nooky. ${template.systemPrompt}`,
       'Provide helpful, concise answers. You only have this chat and the information supplied here. You cannot send messages, connect to apps, browse the web, make bookings, or perform actions. Never claim to have done those things. Do not invent current facts. Ask for missing information when needed.',
       `Use a ${agent.tone} tone.`, agent.instructions ? `User preferences: ${agent.instructions}` : '',
     ].filter(Boolean).join('\n\n');

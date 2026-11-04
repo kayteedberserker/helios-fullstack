@@ -21,11 +21,11 @@ function Protected({ role }) {
   return <Outlet />;
 }
 function RouteScroll() { const { pathname } = useLocation(); useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]); return null; }
-function NotFound() { const { user } = useAuth(); return <div className="hx-not-found"><Empty icon={Compass} title="A little off the beaten path." description="This page doesn’t exist. Let’s find your way back."><ButtonLink to={user ? user.role === 'admin' ? '/admin/dashboard' : '/app/dashboard' : '/'}>Back to Helios</ButtonLink></Empty></div>; }
+function NotFound() { const { user } = useAuth(); return <div className="hx-not-found"><Empty icon={Compass} title="A little off the beaten path." description="This page doesn’t exist. Let’s find your way back."><ButtonLink to={user ? user.role === 'admin' ? '/admin/dashboard' : '/app/dashboard' : '/'}>Back to Nooky</ButtonLink></Empty></div>; }
 class ErrorBoundary extends Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
-  render() { return this.state.failed ? <div className="hx-not-found"><Empty title="Something needs a fresh start." description="Reload the page to open your Helios workspace again."><Button onClick={() => window.location.reload()}>Reload page</Button></Empty></div> : this.props.children; }
+  render() { return this.state.failed ? <div className="hx-not-found"><Empty title="Something needs a fresh start." description="Reload the page to open your Nooky workspace again."><Button onClick={() => window.location.reload()}>Reload page</Button></Empty></div> : this.props.children; }
 }
 export default function App() {
   return <ErrorBoundary><BrowserRouter><AuthProvider><ToastProvider><RouteScroll /><Routes>

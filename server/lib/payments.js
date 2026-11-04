@@ -37,15 +37,28 @@ export async function settlePayment(reference, { verify, store }) {
   return store.apply(reference, transaction);
 }
 
+export function paystackFailure(status, message = '') {
+  if (/currency|\bngn\b/i.test(message) && /support|allow|enable|invalid|merchant/i.test(message)) return { code: 'PAYSTACK_CURRENCY', message: 'Paystack rejected NGN checkout for this merchant/key. Confirm this is the correct Nigerian merchant account and secret key.' };
+  if (status === 401 || status === 403 || /invalid.*key|invalid.*secret|unauthori[sz]ed/i.test(message)) return { code: 'PAYSTACK_AUTH', message: 'Paystack rejected the secret key. Set PAYSTACK_SECRET_KEY to the merchant secret key (sk_test_... for testing), then redeploy.' };
+  if (/amount|minimum/i.test(message)) return { code: 'PAYSTACK_AMOUNT', message: 'Paystack rejected this amount. Ask the administrator to check the plan price and the merchant currency minimum.' };
+  if (status === 429) return { code: 'PAYSTACK_RATE_LIMIT', message: 'Paystack is receiving too many requests. Please wait and try again.' };
+  return { code: 'PAYSTACK_MERCHANT', message: 'Paystack rejected checkout. Ask the administrator to run npm run payments:check with the test secret key and confirm NGN is enabled for this merchant.' };
+}
+
 export function createPaystack(secret) {
   async function request(path, body) {
-    if (!secret) throw new HttpError(503, 'Payments are not configured yet. Please contact the Helios team.');
+    if (!secret) throw new HttpError(503, 'Payments are not configured yet. Please contact the Nooky team.');
+    if (!/^sk_(test|live)_/.test(secret)) throw new HttpError(503, 'PAYSTACK_SECRET_KEY must be a secret key beginning sk_test_ or sk_live_, not a public key.');
     let response;
     try {
       response = await fetch(`https://api.paystack.co${path}`, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) });
     } catch { throw new HttpError(502, 'The payment provider is unavailable. Please try again.'); }
     const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.status || !result.data) throw new HttpError(502, 'The payment provider could not process this request. Check your merchant configuration or try again later.');
+    if (!response.ok || !result?.status || !result.data) {
+      const failure = paystackFailure(response.status, typeof result?.message === 'string' ? result.message : '');
+      console.warn('[PAYSTACK]', failure.code, 'HTTP', response.status);
+      const error = new HttpError(502, failure.message); error.code = failure.code; throw error;
+    }
     return result.data;
   }
   return { initialise: body => request('/transaction/initialize', body), verify: reference => request(`/transaction/verify/${encodeURIComponent(reference)}`) };

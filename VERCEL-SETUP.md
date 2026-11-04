@@ -1,4 +1,4 @@
-# Deploy the complete Helios app on Vercel
+# Deploy the complete Nooky app on Vercel
 
 This version keeps the Vite preset. `api/index.js` runs Express as a Vercel Node function. `vercel.json` sends /api requests to that function, serves built assets, and then serves index.html for React Router URLs. It does not run a persistent localhost:4000 server on Vercel.
 

@@ -7,6 +7,6 @@ try {
   await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
   await Promise.all(Object.values(models).map(model => model.init()));
   await seedCatalog(models);
-  console.log('Helios plans and agent specialities are ready. Existing edits were preserved.');
+  console.log('Nooky plans and agent specialities are ready. Existing edits were preserved.');
 } catch { console.error('Seed failed. Check the MongoDB connection and permissions.'); process.exitCode = 1; }
 finally { await mongoose.disconnect(); }

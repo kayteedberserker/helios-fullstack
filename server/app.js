@@ -24,7 +24,7 @@ export function createApp({ config, serveStatic = config.production, models = de
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
   app.use(helmet({ contentSecurityPolicy: { directives: { 'script-src': ["'self'"], 'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'], 'font-src': ["'self'", 'https://fonts.gstatic.com'], 'img-src': ["'self'", 'data:'] } } }));
-  app.use(cors({ origin: config.clientUrl, credentials: true, allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'X-Helios-Client'] }));
+  app.use(cors({ origin: config.clientUrl, credentials: true, allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'X-Nooky-Client', 'X-Helios-Client'] }));
   app.use(cookieParser());
   app.get('/api/health', (req, res) => res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({ status: mongoose.connection.readyState === 1 ? 'ok' : 'not_ready' }));
 

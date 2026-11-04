@@ -63,7 +63,7 @@ function LooseEnds() {
 function Product({ selected, onSelect }) {
   const conversation = conversations.find(item => item.id === selected) || conversations[0];
   return <section id="product" className="product-section section"><div className="container product-layout">
-    <div className="product-copy"><SectionHeading eyebrow="Meet your extra pair of hands" title={<>One conversation.<br /><span className="blue-text">A lot less juggling.</span></>} description="Ask a question. Make a plan. Pick up where you left off. Helios brings the details together, so you can get on with your day." />
+    <div className="product-copy"><SectionHeading eyebrow="Meet your extra pair of hands" title={<>One conversation.<br /><span className="blue-text">A lot less juggling.</span></>} description="Ask a question. Make a plan. Pick up where you left off. Nooky brings the details together, so you can get on with your day." />
       <div className="demo-tabs" role="group" aria-label="Choose a conversation example">{conversations.map(item => <button key={item.id} className={selected === item.id ? 'selected' : ''} aria-pressed={selected === item.id} onClick={() => onSelect(item.id)}><Icon name={item.icon} size={16} />{item.label}</button>)}</div>
       <div className="demo-caption" aria-live="polite"><h3>{conversation.title}</h3><p>{conversation.subtitle}</p></div>
       <p className="quiet-note"><ShieldCheck size={16} aria-hidden="true" />Your call, always. Suggestions first, approval next.</p>
@@ -85,9 +85,9 @@ function UseCases({ onSelect }) {
 
 function Integrations() {
   return <section id="integrations" className="section integrations-section"><div className="container">
-    <SectionHeading centered eyebrow="Already part of your world" title={<>Your favourite apps.<br />Finally on the same page.</>} description="A glimpse of where Helios can go. App connections are on the roadmap; this first release brings your agent into a personal Helios workspace." />
+    <SectionHeading centered eyebrow="Already part of your world" title={<>Your favourite apps.<br />Finally on the same page.</>} description="A glimpse of where Nooky can go. App connections are on the roadmap; this first release brings your agent into a personal Nooky workspace." />
     <div className="integration-network"><div className="integration-hub" aria-label={`${site.name} connects your apps`}><Sparkles size={28} aria-hidden="true" /><span>{site.name}</span></div><div className="integration-grid">{integrations.map(item => <div className="integration" key={item.id}><span className={`app-icon ${item.color}`}><Icon name={item.icon} size={25} /></span><strong>{item.name}</strong><span>{item.category}</span><span className="integration-planned">Planned connection</span></div>)}</div></div>
-    <p className="integration-note"><ShieldCheck size={17} aria-hidden="true" />App connections are planned. Your agent currently works inside Helios.</p>
+    <p className="integration-note"><ShieldCheck size={17} aria-hidden="true" />App connections are planned. Your agent currently works inside Nooky.</p>
   </div></section>;
 }
 
@@ -103,10 +103,10 @@ function Pricing() {
   const { user } = useAuth();
   const [billing, setBilling] = useState('monthly');
   const catalog = useResource('/catalog');
-  const pricingPlans = catalog.data?.plans.map(plan => ({ ...plan, id: plan.code, monthly: plan.monthlyPrice / 100, yearly: plan.yearlyPrice / 100, tagline: plan.description })) || plans;
+  const pricingPlans = catalog.data?.plans.map(plan => ({ ...plan, id: plan.code, monthly: plan.monthlyPrice / 100, yearly: plan.yearlyPrice / 100, tagline: plan.description })) || plans.filter(plan => plan.published !== false);
   return <section id="pricing" className="section pricing-section"><div className="container">
     <div className="pricing-heading"><SectionHeading eyebrow="A little help. Or a whole lot." title={<>Start small.<br />Make room for more.</>} description="Find the kind of support that fits your day." /><div className="billing-control"><div className="billing-toggle" role="group" aria-label="Billing period"><button aria-pressed={billing === 'monthly'} className={billing === 'monthly' ? 'selected' : ''} onClick={() => setBilling('monthly')}>Monthly</button><button aria-pressed={billing === 'yearly'} className={billing === 'yearly' ? 'selected' : ''} onClick={() => setBilling('yearly')}>Yearly</button></div><span>Choose 30 or 365 days of access. Renew manually.</span></div></div>
-    <div className="pricing-grid" aria-live="polite">{pricingPlans.map(plan => <article key={plan.id} className={`plan ${plan.featured ? 'plan-featured' : ''}`}><div className="plan-top"><span className="eyebrow">{plan.name}</span>{plan.featured && <span className="popular-label">The sweet spot</span>}</div><h3>{plan.tagline}</h3><p className="price">${billing === 'monthly' ? plan.monthly : plan.yearly}<span>{plan.monthly > 0 ? billing === 'monthly' ? '/ 30 days' : '/ 365 days' : ' / forever'}</span></p><p className="plan-description">{plan.description}</p><ButtonLink href={`${user?.role === 'user' ? '/app/dashboard' : '/signup'}?plan=${plan.id}&period=${billing}`} className={plan.featured ? '' : 'button-outline'}>Explore {plan.name}</ButtonLink><ul>{plan.features.map(feature => <li key={feature}><Check size={17} aria-hidden="true" />{feature}</li>)}</ul></article>)}</div>
+    <div className="pricing-grid" aria-live="polite">{pricingPlans.map(plan => <article key={plan.id} className={`plan ${plan.featured ? 'plan-featured' : ''}`}><div className="plan-top"><span className="eyebrow">{plan.name}</span>{plan.featured && <span className="popular-label">The sweet spot</span>}</div><h3>{plan.tagline}</h3><p className="price">₦{(billing === 'monthly' ? plan.monthly : plan.yearly).toLocaleString('en-NG')}<span>{plan.monthly > 0 ? billing === 'monthly' ? '/ 30 days' : '/ 365 days' : ' / forever'}</span></p><p className="plan-description">{plan.description}</p><ButtonLink href={`${user?.role === 'user' ? '/app/dashboard' : '/signup'}?plan=${plan.id}&period=${billing}`} className={plan.featured ? '' : 'button-outline'}>Explore {plan.name}</ButtonLink><ul>{plan.features.map(feature => <li key={feature}><Check size={17} aria-hidden="true" />{feature}</li>)}</ul></article>)}</div>
   </div></section>;
 }
 
@@ -120,7 +120,7 @@ function Footer() {
 }
 
 export default function LandingPage() {
-  useEffect(() => { document.title = 'Helios — A little less to think about.'; }, []);
+  useEffect(() => { document.title = 'Nooky — A little less to think about.'; }, []);
   const [selectedDemo, setSelectedDemo] = useState(conversations[0].id);
   return <><a className="skip-link" href="#main">Skip to content</a><Header /><PageMotion><main id="main"><Hero /><LooseEnds /><Product selected={selectedDemo} onSelect={setSelectedDemo} /><UseCases onSelect={setSelectedDemo} /><Integrations /><Customers /><Pricing /><Faq /></main><Footer /></PageMotion></>;
 }

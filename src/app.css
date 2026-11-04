@@ -1,4 +1,4 @@
-/* Helios application surfaces. Namespaced to preserve the landing page. */
+/* Nooky application surfaces. Namespaced to preserve the landing page. */
 .hx-app,.hx-auth,.hx-not-found,.hx-route-loading{--hx-cream:#f7f6f0;--hx-line:#e6e7df;--hx-blue:#087af5;--hx-ink:#212b34;--hx-muted:#74808a;color:var(--hx-ink);font-size:14px}
 .hx-app{background:#fafaf7;min-height:100vh}
 .hx-app button,.hx-auth button{font-family:inherit}
@@ -380,3 +380,5 @@
 .hx-table{font-size:12px}.hx-table th{font-size:11px}.hx-table td small{font-size:10px}
 .hx-field>label{font-size:12px}.hx-field input,.hx-field textarea,.hx-field select{font-size:13px}
 @media(max-width:650px){.hx-panel-title p{font-size:11px}.hx-field>label{font-size:11px}.hx-table{font-size:11px}.hx-table th{font-size:10px}.hx-activity p{font-size:11px}}
+
+.hx-google-signin{margin:18px 0}.hx-google-signin p{text-align:center;font-size:11px;color:#596974;margin:12px 0;line-height:1.7}

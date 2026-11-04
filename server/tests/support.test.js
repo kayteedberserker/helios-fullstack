@@ -89,7 +89,7 @@ function fixture() {
   const store = mongoSupportStore(models, transaction);
   const app = createApp({ config, models, supportStore: store });
   const headers = (req, user = users[0]) => req.set('Cookie', `helios_session=${jwt.sign({ ver: 0, csrf: 'test-csrf' }, config.jwtSecret, { subject: user._id, issuer: 'helios-api', audience: 'helios-web' })}`)
-    .set('X-CSRF-Token', 'test-csrf').set('X-Helios-Client', '1').set('Origin', config.clientUrl);
+    .set('X-CSRF-Token', 'test-csrf').set('X-Nooky-Client', '1').set('Origin', config.clientUrl);
   return { app, headers, store, failInsert: () => { failCreate = true; } };
 }
 
@@ -116,7 +116,7 @@ test('two customer conversations are isolated; administrators can read and reply
   const inbox = await headers(request(app).get(`/api/admin/support?selected=${threadId}`), users[2]);
   assert.equal(inbox.status, 200); assert.equal(inbox.body.summary.waiting, 2); assert.equal(inbox.body.conversation.thread.customer.email, users[0].email);
   const reply = await headers(request(app).post(`/api/admin/support/${threadId}/messages`), users[2]).send(input('Happy to help'));
-  assert.equal(reply.body.message.senderRole, 'admin'); assert.equal(reply.body.message.senderName, 'Helios support');
+  assert.equal(reply.body.message.senderRole, 'admin'); assert.equal(reply.body.message.senderName, 'Nooky support');
   assert.equal(reply.body.thread.needsReply, false);
   assert.equal((await headers(request(app).get('/api/support/summary'))).body.thread.unread, 1);
 });

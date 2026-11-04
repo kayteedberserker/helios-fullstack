@@ -36,7 +36,7 @@ export function agentRoutes({ models, config, auth, ai, chatLimit }) {
   });
   router.post('/messages', chatLimit, async (req, res) => {
     const { content } = z.object({ content: z.string().trim().min(1).max(4000) }).strict().parse(req.body);
-    if (!config.aiKey) throw new HttpError(503, 'Your AI service is not configured yet. Contact the Helios team.');
+    if (!config.aiKey) throw new HttpError(503, 'Your AI service is not configured yet. Contact the Nooky team.');
     const userId = req.user._id;
     const leaseToken = crypto.randomUUID();
     const agent = await models.AgentInstance.findOneAndUpdate({ userId, status: 'active', $or: [{ leaseUntil: null }, { leaseUntil: { $lte: new Date() } }] }, { $set: { leaseToken, leaseUntil: new Date(Date.now() + 120000) } }, { new: true });

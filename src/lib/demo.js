@@ -1,18 +1,18 @@
 import { defaultPlans, defaultTemplates } from '../../shared/catalog.js';
 import { demoSupportRequest } from './demoSupport.js';
 
-const STORAGE = 'helios-preview-v2';
+const STORAGE = 'nooky-preview-ngn-v1';
 const SESSION = 'helios-preview-session';
 const id = n => n.toString(16).padStart(24, '0');
 const now = () => new Date().toISOString();
 const dayAgo = n => new Date(Date.now() - n * 86400000).toISOString();
 const makeId = () => crypto.randomUUID().replaceAll('-', '').slice(0, 24);
 export function demoSeed() {
-  const plans = defaultPlans.map((p, i) => ({ ...p, _id: id(i + 1), currency: 'USD', published: true }));
+  const plans = defaultPlans.map((p, i) => ({ ...p, _id: id(i + 1), currency: 'NGN', published: p.code === 'free' }));
   const templates = defaultTemplates.map((t, i) => ({ ...t, _id: id(i + 11), published: true, systemPrompt: `You are a helpful ${t.name.toLowerCase()}. Ask for context and give useful, practical responses.` }));
   const users = [
     { _id: id(21), name: 'Maya Thompson', email: 'maya@example.com', role: 'user', status: 'active', timezone: 'UTC', createdAt: dayAgo(25) },
-    { _id: id(22), name: 'Helios Admin', email: 'admin@example.com', role: 'admin', status: 'active', timezone: 'UTC', createdAt: dayAgo(30) },
+    { _id: id(22), name: 'Nooky Admin', email: 'admin@example.com', role: 'admin', status: 'active', timezone: 'UTC', createdAt: dayAgo(30) },
     { _id: id(23), name: 'Amara Okafor', email: 'amara@example.com', role: 'user', status: 'active', timezone: 'Africa/Lagos', createdAt: dayAgo(8) },
     { _id: id(24), name: 'Daniel Chen', email: 'daniel@example.com', role: 'user', status: 'active', timezone: 'UTC', createdAt: dayAgo(4) },
   ];
@@ -23,7 +23,7 @@ export function demoSeed() {
     ],
     supportMessages: [
       { _id: id(81), threadId: id(71), senderId: id(21), senderRole: 'user', senderName: 'Maya Thompson', sequence: 1, senderCount: 1, content: 'Hi! Where can I personalise Sunny?', clientId: '00000000-0000-4000-8000-000000000081', createdAt: dayAgo(1) },
-      { _id: id(82), threadId: id(71), senderId: id(22), senderRole: 'admin', senderName: 'Helios Admin', sequence: 2, senderCount: 1, content: 'Hi Maya! You can change Sunny’s name and instructions from My Agent → Edit settings. Happy to help with anything else.', clientId: '00000000-0000-4000-8000-000000000082', createdAt: dayAgo(0) },
+      { _id: id(82), threadId: id(71), senderId: id(22), senderRole: 'admin', senderName: 'Nooky Admin', sequence: 2, senderCount: 1, content: 'Hi Maya! You can change Sunny’s name and instructions from My Agent → Edit settings. Happy to help with anything else.', clientId: '00000000-0000-4000-8000-000000000082', createdAt: dayAgo(0) },
       { _id: id(83), threadId: id(72), senderId: id(23), senderRole: 'user', senderName: 'Amara Okafor', sequence: 1, senderCount: 1, content: 'Hello! Can you help me choose an agent for my small business?', clientId: '00000000-0000-4000-8000-000000000083', createdAt: dayAgo(0) },
     ],
     agents: [{ _id: id(31), userId: id(21), templateId: id(11), name: 'Sunny', instructions: 'Keep things practical. I run a small creative business and like clear next steps.', tone: 'friendly', status: 'active', createdAt: dayAgo(24) }],
@@ -31,7 +31,7 @@ export function demoSeed() {
     usage: { [id(21)]: 127 },
     messages: { [id(21)]: [{ _id: id(41), role: 'assistant', content: 'Hello Maya! I’m Sunny, your everyday assistant. What would you like to make a little easier today? This is a sample conversation for the demo.', createdAt: dayAgo(1) }] },
     activity: [{ _id: id(51), userId: id(21), kind: 'conversation', text: 'You worked with Sunny.', createdAt: dayAgo(0) }, { _id: id(52), userId: id(21), kind: 'agent', text: 'You personalised Sunny’s instructions.', createdAt: dayAgo(1) }, { _id: id(53), userId: id(21), kind: 'payment', text: 'Sample Pro plan activated. No payment was taken.', createdAt: dayAgo(20) }],
-    payments: [{ _id: id(61), userId: id(21), planName: 'Pro', period: 'monthly', amount: 2500, currency: 'USD', reference: 'demo_helios_001', status: 'success', paidAt: dayAgo(20), createdAt: dayAgo(20), demo: true }, { _id: id(62), userId: id(23), planName: 'Max', period: 'monthly', amount: 10000, currency: 'USD', reference: 'demo_helios_002', status: 'success', paidAt: dayAgo(2), createdAt: dayAgo(2), demo: true }, { _id: id(63), userId: id(24), planName: 'Pro', period: 'monthly', amount: 2500, currency: 'USD', reference: 'demo_helios_003', status: 'pending', createdAt: dayAgo(1), demo: true }],
+    payments: [{ _id: id(61), userId: id(21), planName: 'Pro', period: 'monthly', amount: 2500, currency: 'NGN', reference: 'demo_helios_001', status: 'success', paidAt: dayAgo(20), createdAt: dayAgo(20), demo: true }, { _id: id(62), userId: id(23), planName: 'Max', period: 'monthly', amount: 10000, currency: 'NGN', reference: 'demo_helios_002', status: 'success', paidAt: dayAgo(2), createdAt: dayAgo(2), demo: true }, { _id: id(63), userId: id(24), planName: 'Pro', period: 'monthly', amount: 2500, currency: 'NGN', reference: 'demo_helios_003', status: 'pending', createdAt: dayAgo(1), demo: true }],
   };
 }
 function read() { try { const state = JSON.parse(localStorage.getItem(STORAGE)) || demoSeed(); if (!state.supportThreads) { const seed = demoSeed(); state.supportThreads = seed.supportThreads; state.supportMessages = seed.supportMessages; } return state; } catch { return demoSeed(); } }
@@ -83,6 +83,7 @@ export async function demoRequest(path, { method = 'GET', body } = {}) {
       (state.messages[user._id] ||= []).push(...messages); state.usage[user._id] = (state.usage[user._id] || 0) + 1; result = { messages, responses: state.usage[user._id] }; event(state, user._id, 'conversation', `You worked with ${agent().name}.`);
     } else if (route === '/payments/checkout') {
       const plan = state.plans.find(p => p._id === body.planId);
+      if (!plan || !plan.published || plan.currency !== 'NGN' || plan.pricingNeedsReview || Math.min(plan.monthlyPrice, plan.yearlyPrice) < 5000) fail('Set and publish NGN plan prices in the admin demo first.');
       state.subscriptions = state.subscriptions.filter(s => s.userId !== user._id);
       state.subscriptions.push({ userId: user._id, planCode: plan.code, planName: plan.name, responseLimit: plan.responseLimit, period: body.period, startsAt: now(), endsAt: new Date(Date.now() + (body.period === 'yearly' ? 365 : 30) * 86400000).toISOString() });
       result = { demo: true, message: `Preview switched to ${plan.name}. No payment was processed.` }; event(state, user._id, 'plan', `You previewed the ${plan.name} plan. No payment was processed.`);
@@ -90,7 +91,7 @@ export async function demoRequest(path, { method = 'GET', body } = {}) {
       result = demoSupportRequest(state, user, parsed, method, body);
     } else if (route.startsWith('/admin/')) {
       if (user.role !== 'admin') fail('Administrator access required.', 403);
-      if (route === '/admin/dashboard') result = { stats: { users: state.users.filter(u => u.role === 'user').length, agents: state.agents.filter(a => a.status === 'active').length, revenue: state.payments.filter(p => p.status === 'success' && p.paidAt.slice(0, 7) === now().slice(0, 7)).reduce((total, p) => total + p.amount, 0), responses: Object.values(state.usage).reduce((a, b) => a + b, 0), payments: state.payments.filter(p => p.status === 'success').length }, recentPayments: state.payments.filter(p => p.status === 'success').map(p => ({ ...p, userId: state.users.find(u => u._id === p.userId) })), activity: state.activity.slice(0, 6).map(e => ({ ...e, userId: state.users.find(u => u._id === e.userId) })), services: { database: false, payments: false, ai: false, mail: false } };
+      if (route === '/admin/dashboard') result = { stats: { users: state.users.filter(u => u.role === 'user').length, agents: state.agents.filter(a => a.status === 'active').length, revenue: state.payments.filter(p => p.currency === 'NGN' && p.status === 'success' && p.paidAt.slice(0, 7) === now().slice(0, 7)).reduce((total, p) => total + p.amount, 0), responses: Object.values(state.usage).reduce((a, b) => a + b, 0), payments: state.payments.filter(p => p.status === 'success').length }, recentPayments: state.payments.filter(p => p.status === 'success').map(p => ({ ...p, userId: state.users.find(u => u._id === p.userId) })), activity: state.activity.slice(0, 6).map(e => ({ ...e, userId: state.users.find(u => u._id === e.userId) })), services: { database: false, payments: false, ai: false, mail: false } };
       else if (route === '/admin/users') {
         const search = parsed.searchParams.get('search')?.toLowerCase() || ''; const page = Number(parsed.searchParams.get('page') || 1);
         const users = state.users.filter(u => `${u.name} ${u.email}`.toLowerCase().includes(search)); result = { users: users.slice((page - 1) * 20, page * 20), total: users.length, page, pages: Math.max(1, Math.ceil(users.length / 20)) };
@@ -98,7 +99,7 @@ export async function demoRequest(path, { method = 'GET', body } = {}) {
       else if (route === '/admin/catalog') result = { templates: state.templates, plans: state.plans, agents: state.agents.length };
       else if (route === '/admin/templates' && method === 'POST') { const template = { ...body, _id: makeId() }; state.templates.push(template); result = { template }; }
       else if (route.startsWith('/admin/templates/')) { const template = state.templates.find(t => t._id === route.split('/').at(-1)); Object.assign(template, body); result = { template }; }
-      else if (route.startsWith('/admin/plans/')) { const plan = state.plans.find(p => p._id === route.split('/').at(-1)); Object.assign(plan, body); result = { plan }; }
+      else if (route.startsWith('/admin/plans/')) { const plan = state.plans.find(p => p._id === route.split('/').at(-1)); if (plan.code !== 'free' && body.published && Math.min(body.monthlyPrice, body.yearlyPrice) < 5000) fail('Paid NGN prices must be at least ₦50.'); Object.assign(plan, body, { currency: 'NGN', pricingNeedsReview: false }); result = { plan }; }
       else if (route === '/admin/payments') {
         const status = parsed.searchParams.get('status') || 'all'; const page = Number(parsed.searchParams.get('page') || 1);
         const payments = state.payments.filter(p => status === 'all' || p.status === status).map(p => ({ ...p, userId: state.users.find(u => u._id === p.userId) })); result = { payments: payments.slice((page - 1) * 20, page * 20), total: payments.length, page, pages: Math.max(1, Math.ceil(payments.length / 20)) };

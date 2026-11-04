@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { demoRequest } from '../../src/lib/demo.js';
+import { demoSeed, demoRequest } from '../../src/lib/demo.js';
 import { toCsv } from '../../src/lib/exportCsv.js';
 
 const storage = () => { const values = new Map(); return { getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) }; };
@@ -12,15 +12,22 @@ test('the demo supports a fresh account, agent creation, chat, personalisation, 
   await demoRequest('/agent', { method: 'POST', body: { templateId: catalog.templates[0]._id, name: 'Sunny', tone: 'friendly', instructions: 'Be concise.' } });
   const chat = await demoRequest('/agent/messages', { method: 'POST', body: { content: 'Help me plan my day.' } }); assert.equal(chat.messages.length, 2); assert.match(chat.messages[1].content, /sample demo response/);
   await demoRequest('/account/profile', { method: 'PATCH', body: { name: 'Alex Updated', timezone: 'Africa/Lagos' } }); assert.equal((await demoRequest('/auth/me')).user.name, 'Alex Updated');
-  const billing = await demoRequest('/payments/checkout', { method: 'POST', body: { planId: catalog.plans[1]._id, period: 'monthly' } }); assert.equal(billing.demo, true);
+  const fixture = JSON.parse(localStorage.getItem('nooky-preview-ngn-v1'));
+  Object.assign(fixture.plans[1], { published: true, pricingNeedsReview: false, currency: 'NGN', monthlyPrice: 500000, yearlyPrice: 5000000 });
+  localStorage.setItem('nooky-preview-ngn-v1', JSON.stringify(fixture));
+  const billing = await demoRequest('/payments/checkout', { method: 'POST', body: { planId: demoSeed().plans[1]._id, period: 'monthly' } }); assert.equal(billing.demo, true);
   const dashboard = await demoRequest('/account/dashboard'); assert.equal(dashboard.plan.code, 'pro'); assert.equal(dashboard.usage.responses, 1); assert.equal(dashboard.payments.length, 0);
-  assert.equal(localStorage.getItem('helios-preview-v2').includes(password), false);
+  assert.equal(localStorage.getItem('nooky-preview-ngn-v1').includes(password), false);
   await demoRequest('/auth/logout', { method: 'POST' }); await assert.rejects(demoRequest('/account/dashboard'));
 });
 test('a customer preview cannot read admin data; admin catalog edits update the preview', async () => {
   await demoRequest('/auth/demo', { method: 'POST', body: { role: 'user' } }); await assert.rejects(demoRequest('/admin/users'));
   await demoRequest('/auth/demo', { method: 'POST', body: { role: 'admin' } });
   const catalog = await demoRequest('/admin/catalog'); const template = catalog.templates[0];
+  const freePlan = catalog.plans.find(p => p.code === 'free');
+  const freeUpdate = await demoRequest(`/admin/plans/${freePlan._id}`, { method: 'PATCH', body: { monthlyPrice: 0, yearlyPrice: 0, published: true } });
+  assert.equal(freeUpdate.plan.currency, 'NGN');
+  assert.equal(freeUpdate.plan.monthlyPrice, 0);
   await demoRequest(`/admin/templates/${template._id}`, { method: 'PATCH', body: { name: 'Updated speciality' } });
   assert.equal((await demoRequest('/admin/catalog')).templates[0].name, 'Updated speciality');
   const filtered = await demoRequest('/admin/payments?status=success&page=1'); assert.ok(filtered.payments.every(p => p.status === 'success'));

@@ -5,8 +5,17 @@ const specialistPrompts = {
   content: 'You are an attentive writing partner. Help with content ideas, writing, editing, and campaigns. Ask about audience and voice when helpful.',
   business: 'You help small businesses draft proposals, plan projects, analyse supplied information, and respond thoughtfully to customers.',
 };
+export async function migrateNairaPricing(models) {
+  // Snapshot old currency and amounts once. Never reinterpret dollar cents as kobo.
+  await models.Plan.updateMany({ currency: { $ne: 'NGN' } }, [{ $set: {
+    legacyPricing: { $ifNull: ['$legacyPricing', { currency: { $ifNull: ['$currency', 'USD'] }, monthlyPrice: '$monthlyPrice', yearlyPrice: '$yearlyPrice' }] },
+    currency: 'NGN', monthlyPrice: 0, yearlyPrice: 0,
+    published: { $eq: ['$code', 'free'] }, pricingNeedsReview: { $ne: ['$code', 'free'] },
+  } }]);
+}
 export async function seedCatalog(models) {
-  for (const plan of defaultPlans) await models.Plan.updateOne({ code: plan.code }, { $setOnInsert: { ...plan, currency: 'USD', published: true } }, { upsert: true });
+  await migrateNairaPricing(models);
+  for (const plan of defaultPlans) await models.Plan.updateOne({ code: plan.code }, { $setOnInsert: { ...plan, currency: 'NGN', published: plan.code === 'free' } }, { upsert: true });
   for (const template of defaultTemplates) await models.AgentTemplate.updateOne({ key: template.key }, { $setOnInsert: { ...template, systemPrompt: specialistPrompts[template.key], published: true } }, { upsert: true });
 }
 export const usageBucket = (date = new Date()) => date.toISOString().slice(0, 7);

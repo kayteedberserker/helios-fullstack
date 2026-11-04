@@ -10,14 +10,15 @@ export function paymentRoutes({ models, config, auth, gateway, settlementStore }
   router.use(auth, requireUser);
   router.post('/checkout', async (req, res) => {
     const data = z.object({ planId: objectId, period: z.enum(['monthly', 'yearly']) }).strict().parse(req.body);
-    if (!config.paystackSecret) throw new HttpError(503, 'Payments are not configured yet. Contact the Helios team.');
+    if (!config.paystackSecret) throw new HttpError(503, 'Payments are not configured yet. Contact the Nooky team.');
     const plan = await models.Plan.findOne({ _id: data.planId, published: true });
     if (!plan || plan.code === 'free') throw new HttpError(400, 'Choose an available paid plan.');
+    if (plan.currency !== 'NGN' || plan.pricingNeedsReview) throw new HttpError(400, 'This plan needs confirmed NGN prices. Contact support.');
     const amount = data.period === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
-    if (!Number.isSafeInteger(amount) || amount <= 0) throw new HttpError(400, 'This plan does not have a valid price.');
+    if (!Number.isSafeInteger(amount) || amount < 5000) throw new HttpError(400, 'Paid plans must cost at least ₦50.00. Ask the administrator to set NGN prices.');
     const reference = `helios_${crypto.randomBytes(16).toString('hex')}`;
-    const payment = await models.Payment.create({ userId: req.user._id, email: req.user.email, planId: plan._id, planCode: plan.code, planName: plan.name, responseLimit: plan.responseLimit, period: data.period, amount, currency: 'USD', reference });
-    const checkout = await gateway.initialise({ email: req.user.email, amount, currency: 'USD', reference, channels: ['card'], callback_url: `${config.clientUrl}/payment/callback`, metadata: { userId: String(req.user._id), planCode: plan.code, period: data.period } });
+    const payment = await models.Payment.create({ userId: req.user._id, email: req.user.email, planId: plan._id, planCode: plan.code, planName: plan.name, responseLimit: plan.responseLimit, period: data.period, amount, currency: 'NGN', reference });
+    const checkout = await gateway.initialise({ email: req.user.email, amount, currency: 'NGN', reference, channels: ['card'], callback_url: `${config.clientUrl}/payment/callback`, metadata: { userId: String(req.user._id), planCode: plan.code, period: data.period } });
     const url = new URL(checkout.authorization_url);
     if (url.protocol !== 'https:' || (url.hostname !== 'checkout.paystack.com' && !url.hostname.endsWith('.paystack.com'))) throw new HttpError(502, 'The payment provider returned an unexpected checkout URL.');
     res.status(201).json({ checkoutUrl: url.href, reference: payment.reference });
