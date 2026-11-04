@@ -16,6 +16,14 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/privacy(?:-policy)?/?",
+      "dest": "/privacy.html"
+    },
+    {
+      "src": "/terms(?:-of-service)?/?",
+      "dest": "/terms.html"
+    },
+    {
       "handle": "filesystem"
     },
     {

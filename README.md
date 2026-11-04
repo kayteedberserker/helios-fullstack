@@ -1,6 +1,8 @@
 # Nooky — React, Express & MongoDB
 
-**Latest update:** See [NOOKY-SETUP.md](NOOKY-SETUP.md) for the identity change, Google customer sign-in and linking, and Paystack diagnostics.
+**Public legal pages:** /privacy and /terms. Review shared/legal.js and fill VITE_SUPPORT_EMAIL / VITE_LEGAL_ENTITY before publishing. See NOOKY-SETUP.md for Google branding configuration.
+
+**Latest update:** See [NOOKY-SETUP.md](NOOKY-SETUP.md) for the identity change, Google customer sign-in and linking, plus Google sign-in for existing invited admins, and Paystack diagnostics.
 
 **Vercel deployment:** This version includes a Vite frontend plus an Express Node function. Follow [VERCEL-SETUP.md](VERCEL-SETUP.md) for project settings, environment variables, health checks and logs.
 

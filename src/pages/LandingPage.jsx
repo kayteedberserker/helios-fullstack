@@ -4,6 +4,7 @@ import { site, navLinks, looseEnds, conversations, useCases, integrations, custo
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext.jsx';
 import { useResource } from '../lib/useResource.js';
+import LegalLinks from '../components/LegalLinks.jsx';
 import PageMotion from '../components/PageMotion.jsx';
 
 const icons = { MessageCircle, MessagesSquare, Mail, CalendarDays, Hash, FileText, FolderOpen, Inbox, Sun, Plane, BriefcaseBusiness, Gift };
@@ -116,7 +117,7 @@ function Faq() {
 }
 
 function Footer() {
-  return <><section className="closing-section"><div className="container"><p className="eyebrow">You have better things to do.</p><h2>{site.footer}</h2><p>Let the little things take up a little less space.</p><ButtonLink className="button-white"><MessageCircle size={19} aria-hidden="true" />{site.hero.cta}</ButtonLink></div></section><footer className="footer"><div className="container"><div className="footer-top"><div><Brand /><p>{site.tagline}</p></div><nav aria-label="Footer navigation">{navLinks.map(link => <a key={link.id} href={`#${link.id}`}>{link.label}</a>)}</nav></div><div className="footer-bottom"><span>© {new Date().getFullYear()} {site.name}. Made for the everyday.</span><a href="#top">Back to top</a></div></div></footer></>;
+  return <><section className="closing-section"><div className="container"><p className="eyebrow">You have better things to do.</p><h2>{site.footer}</h2><p>Let the little things take up a little less space.</p><ButtonLink className="button-white"><MessageCircle size={19} aria-hidden="true" />{site.hero.cta}</ButtonLink></div></section><footer className="footer"><div className="container"><div className="footer-top"><div><Brand /><p>{site.tagline}</p></div><nav aria-label="Footer navigation">{navLinks.map(link => <a key={link.id} href={`#${link.id}`}>{link.label}</a>)}</nav></div><div className="footer-bottom"><span>© {new Date().getFullYear()} {site.name}. Made for the everyday.</span><LegalLinks /><a href="#top">Back to top</a></div></div></footer></>;
 }
 
 export default function LandingPage() {

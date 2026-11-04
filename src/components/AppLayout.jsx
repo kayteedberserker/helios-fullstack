@@ -4,6 +4,7 @@ import { Beaker, Bot, ChevronRight, CreditCard, LayoutDashboard, LogOut, Menu, M
 import { useAuth } from '../lib/AuthContext.jsx';
 import { IS_DEMO } from '../lib/api.js';
 import { SupportProvider, useSupport } from '../lib/SupportContext.jsx';
+import LegalLinks from './LegalLinks.jsx';
 import { ContactSupportButton } from './SupportChat.jsx';
 import { Brand, initials, useToast } from './ui.jsx';
 
@@ -38,7 +39,7 @@ function WorkspaceLayout({ admin }) {
     </aside>
     <div className="hx-main-shell"><header className="hx-topbar"><div className="hx-topbar-left"><button className="hx-icon-button hx-mobile-menu" id="hx-menu-toggle" aria-controls="hx-sidebar" aria-expanded={open} aria-label="Open navigation" onClick={() => setOpen(true)}><Menu size={21} /></button><span>{admin ? 'Admin workspace' : 'My workspace'}</span><ChevronRight size={13} /><strong>{active?.label || 'Profile'}</strong></div><div className="hx-topbar-right">{admin ? <Link to="/admin/support" className="hx-support-trigger" aria-label={`Support inbox${supportCount ? `, ${supportCount} conversations need attention` : ''}`} title={summaryError ? 'Support updates unavailable. Open the inbox to retry.' : 'Open support inbox'}><MessageCircle size={17} /><span>Support</span>{supportCount > 0 && <span className="hx-support-count" aria-label={`${supportCount} support conversations need attention`}>{supportCount > 99 ? '99+' : supportCount}</span>}</Link> : <ContactSupportButton />}<span className="hx-workspace-label"><i className="hx-live-dot" />{IS_DEMO ? 'Demo workspace' : 'Nooky workspace'}</span><Link to={admin ? '/admin/profile' : '/app/profile'} className="hx-topbar-avatar" aria-label="Your profile">{initials(user.name)}</Link></div></header>
       {IS_DEMO && <div className="hx-demo-banner"><Beaker size={16} /><p>Preview mode <span>· Demo data, sample AI responses, and no real payments.</span></p><button onClick={switchDemo}>Explore {admin ? 'user' : 'admin'} view <ChevronRight size={14} /></button></div>}
-      <main className="hx-main" id="workspace-main" tabIndex={-1}><Outlet /></main><footer className="hx-app-footer"><span>Nooky. A little less to think about.</span><span>© {new Date().getFullYear()}</span></footer>
+      <main className="hx-main" id="workspace-main" tabIndex={-1}><Outlet /></main><footer className="hx-app-footer"><span>Nooky. A little less to think about.</span><LegalLinks /><span>© {new Date().getFullYear()}</span></footer>
     </div>
   </div>;
 }

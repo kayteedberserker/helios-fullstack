@@ -1,3 +1,11 @@
+# Public legal pages update
+
+Privacy Policy: /privacy. Terms of Service: /terms. Fill VITE_SUPPORT_EMAIL and your actual operator name in VITE_LEGAL_ENTITY, review the policy drafts, redeploy, and set these public URLs in Google Auth Platform → Branding. Read NOOKY-SETUP.md. The full project retains NGN checkout and admin Google linking.
+
+# Admin Google sign-in update
+
+Existing invited admins can connect their matching Google account in Admin Profile after signing in with a password, then use Continue with Google on /admin/login. Google cannot register new admin accounts. Use the same Google environment values and callback URI. Read NOOKY-SETUP.md.
+
 # NGN currency update
 
 Read NOOKY-SETUP.md. After restarting or redeploying, set your monthly and yearly naira prices in Admin → Agents & plans and publish Pro/Max. Existing USD plan prices are archived and paid checkout is paused until you confirm NGN prices. No exchange rate has been assumed.

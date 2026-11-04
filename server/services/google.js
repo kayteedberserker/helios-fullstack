@@ -16,18 +16,19 @@ export function googleProvider(config, client = new OAuth2Client(config.googleCl
   };
 }
 
-export async function googleAccount(models, profile, linkingUser, transaction = work => mongoose.connection.transaction(work)) {
+export async function googleAccount(models, profile, linkingUser, transaction = work => mongoose.connection.transaction(work), role = 'user') {
   if (linkingUser) {
-    if (linkingUser.role !== 'user' || linkingUser.status !== 'active' || profile.email !== linkingUser.email) throw new HttpError(403, 'Choose the Google account matching your customer email.');
-    const user = await models.User.findOneAndUpdate({ _id: linkingUser._id, status: 'active', role: 'user', $or: [{ googleId: { $exists: false } }, { googleId: profile.sub }] }, { $set: { googleId: profile.sub } }, { new: true });
+    if (linkingUser.role !== role || !['user', 'admin'].includes(role) || linkingUser.status !== 'active' || profile.email !== linkingUser.email) throw new HttpError(403, 'Choose the Google account matching your account email.');
+    const user = await models.User.findOneAndUpdate({ _id: linkingUser._id, status: 'active', role, $or: [{ googleId: { $exists: false } }, { googleId: profile.sub }] }, { $set: { googleId: profile.sub } }, { new: true });
     if (!user) throw new HttpError(409, 'This account already has a different Google sign-in.');
     return user;
   }
   let user = await models.User.findOne({ googleId: profile.sub });
   if (user) {
-    if (user.role !== 'user' || user.status !== 'active') throw new HttpError(403, 'This account is unavailable.');
+    if (user.role !== role || user.status !== 'active') throw new HttpError(403, 'This account is unavailable.');
     return user;
   }
+  if (role === 'admin') { const error = new HttpError(403, 'Sign in to your invited admin account with your password, then connect Google from Profile.'); error.code = 'GOOGLE_ADMIN_UNLINKED'; throw error; }
   // Do not silently link a password account just because the emails match.
   if (await models.User.exists({ email: profile.email })) throw new HttpError(409, 'Sign in with your password, then connect Google from Profile.');
   const passwordHash = await hashPassword(randomToken());

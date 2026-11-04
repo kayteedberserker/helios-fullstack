@@ -47,7 +47,7 @@ test('deployment routes prioritize the API over files and the React fallback', a
   const config = JSON.parse(await readFile(new URL('../../vercel.json', import.meta.url)));
   assert.equal(typeof config.functions['api/index.js'].includeFiles, 'string');
   assert.equal(typeof config.functions['api/index.js'].excludeFiles, 'string');
-  const [api, files, spa] = config.routes;
+  const api = config.routes[0], files = config.routes.find(r => r.handle === 'filesystem'), spa = config.routes.at(-1);
   assert.equal(new RegExp(`^${api.src}$`).test('/api/auth/me'), true);
   assert.equal(new RegExp(`^${api.src}$`).test('/api/payments/webhook'), true);
   assert.equal(new RegExp(`^${api.src}$`).test('/app/dashboard'), false);

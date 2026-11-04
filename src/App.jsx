@@ -4,6 +4,7 @@ import { Compass } from 'lucide-react';
 import { AuthProvider, useAuth } from './lib/AuthContext.jsx';
 import { Button, ButtonLink, Empty, Loading, ToastProvider } from './components/ui.jsx';
 import AppLayout from './components/AppLayout.jsx';
+import LegalPage from './pages/LegalPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import { AuthPage, PasswordPage } from './pages/AuthPages.jsx';
 import UserDashboard from './pages/UserDashboard.jsx';
@@ -30,6 +31,8 @@ class ErrorBoundary extends Component {
 export default function App() {
   return <ErrorBoundary><BrowserRouter><AuthProvider><ToastProvider><RouteScroll /><Routes>
     <Route path="/" element={<LandingPage />} />
+    <Route path="/privacy" element={<LegalPage kind="privacy" />} /><Route path="/privacy-policy" element={<LegalPage kind="privacy" />} />
+    <Route path="/terms" element={<LegalPage kind="terms" />} /><Route path="/terms-of-service" element={<LegalPage kind="terms" />} />
     <Route path="/login" element={<AuthPage />} /><Route path="/signup" element={<AuthPage signup />} />
     <Route path="/admin/login" element={<AuthPage admin />} /><Route path="/admin/signup" element={<AuthPage signup admin />} />
     <Route path="/forgot-password" element={<PasswordPage />} /><Route path="/reset-password" element={<PasswordPage reset />} />

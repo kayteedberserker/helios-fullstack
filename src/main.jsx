@@ -5,6 +5,7 @@ import './styles.css';
 import './motion.css';
 import './app.css';
 import './support.css';
+import './legal.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode><App /></React.StrictMode>,

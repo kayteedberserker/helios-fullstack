@@ -15,7 +15,7 @@ const customer = { _id: '000000000000000000000021', name: 'Maya', email: 'maya@e
 function fixture(overrides = {}) {
   const calls = [];
   const app = express(); app.use(cookieParser());
-  const auth = async (req, res, next) => { if (req.get('x-test-session') !== 'valid') throw new Error('No session'); req.user = customer; next(); };
+  const auth = async (req, res, next) => { if (req.get('x-test-session') !== 'valid') throw new Error('No session'); req.user = overrides.user || customer; next(); };
   app.use('/api/auth', googleRoutes({ config: overrides.config || config, models: {}, auth,
     provider: { exchange: async (...args) => { calls.push(args); return { sub: 'google-subject', email: customer.email, name: customer.name }; } },
     resolveAccount: overrides.resolveAccount || (async () => customer) }));
@@ -104,4 +104,51 @@ test('Google exchange requires verified email and the exact nonce after ID token
   await assert.rejects(provider.exchange('code', 'verifier', 'expected'), e => e.status === 401);
   profile = { ...profile, nonce: 'expected', email_verified: false };
   await assert.rejects(provider.exchange('code', 'verifier', 'expected'), e => e.status === 401);
+});
+
+
+const administrator = { ...customer, _id: '000000000000000000000022', role: 'admin', email: 'admin@example.com' };
+test('an existing administrator can explicitly link Google without changing privileges', async () => {
+  let filter, update;
+  const models = { User: { findOneAndUpdate: async (f, u) => { filter = f; update = u; return administrator; } } };
+  const user = await googleAccount(models, { sub: 'admin-google', email: administrator.email }, administrator, undefined, 'admin');
+  assert.equal(user.role, 'admin'); assert.equal(filter.role, 'admin'); assert.equal(filter._id, administrator._id);
+  assert.deepEqual(update, { $set: { googleId: 'admin-google' } });
+  await assert.rejects(googleAccount(models, { sub: 'admin-google', email: 'wrong@example.com' }, administrator, undefined, 'admin'), e => e.status === 403);
+});
+test('admin Google login accepts only an existing linked active administrator and never creates accounts', async () => {
+  const profile = { sub: 'subject', email: administrator.email, name: 'Admin' };
+  const linked = await googleAccount({ User: { findOne: async () => administrator } }, profile, null, undefined, 'admin');
+  assert.equal(linked.role, 'admin');
+  // Missing write methods deliberately make any attempted account creation fail.
+  await assert.rejects(googleAccount({ User: { findOne: async () => null } }, profile, null, undefined, 'admin'), e => e.code === 'GOOGLE_ADMIN_UNLINKED');
+  await assert.rejects(googleAccount({ User: { findOne: async () => customer } }, profile, null, undefined, 'admin'), e => e.status === 403);
+  await assert.rejects(googleAccount({ User: { findOne: async () => ({ ...administrator, status: 'suspended' }) } }, profile, null, undefined, 'admin'), e => e.status === 403);
+});
+test('admin linking binds the actual authenticated role even when a customer portal is requested', async () => {
+  let role, user;
+  const { app } = fixture({ user: administrator, resolveAccount: async (models, profile, linked, txn, portal) => { role = portal; user = linked; return administrator; } });
+  const start = await request(app).get('/api/auth/google/start?mode=link&role=user').set('x-test-session', 'valid');
+  const state = new URL(start.headers.location).searchParams.get('state');
+  const response = await request(app).get(`/api/auth/google/callback?state=${state}&code=once&role=user`).set('Cookie', flowCookie(start)).set('x-test-session', 'valid');
+  assert.equal(role, 'admin'); assert.equal(user, administrator); assert.equal(response.headers.location, `${config.clientUrl}/admin/profile?google=linked`);
+});
+test('admin login portal is bound in signed state and redirects to the admin dashboard', async () => {
+  let portal;
+  const { app } = fixture({ resolveAccount: async (models, profile, linked, transaction, role) => { portal = role; return administrator; } });
+  const start = await request(app).get('/api/auth/google/start?role=admin'); const state = new URL(start.headers.location).searchParams.get('state');
+  const response = await request(app).get(`/api/auth/google/callback?state=${state}&code=once&role=user`).set('Cookie', flowCookie(start));
+  assert.equal(portal, 'admin'); assert.equal(response.headers.location, `${config.clientUrl}/admin/dashboard`);
+  assert.ok(response.headers['set-cookie'].some(c => c.startsWith('helios_session=')));
+});
+test('a customer account returned to an admin Google callback cannot receive an admin session', async () => {
+  const { app } = fixture(); const start = await request(app).get('/api/auth/google/start?role=admin'); const state = new URL(start.headers.location).searchParams.get('state');
+  const response = await request(app).get(`/api/auth/google/callback?state=${state}&code=once`).set('Cookie', flowCookie(start));
+  assert.match(response.headers.location, /admin\/login\?google_error=account_unavailable/);
+  assert.equal(response.headers['set-cookie'].some(c => c.startsWith('helios_session=')), false);
+});
+test('admin Google cancellation returns to admin login', async () => {
+  const { app, calls } = fixture(); const start = await request(app).get('/api/auth/google/start?role=admin'); const state = new URL(start.headers.location).searchParams.get('state');
+  const response = await request(app).get(`/api/auth/google/callback?state=${state}&error=access_denied`).set('Cookie', flowCookie(start));
+  assert.equal(response.headers.location, `${config.clientUrl}/admin/login?google_error=cancelled`); assert.equal(calls.length, 0);
 });
