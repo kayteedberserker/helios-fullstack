@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { signupSchema, email, password, tokenSchema, HttpError, hashPassword, comparePassword, issueSession, cookieOptions, randomToken, hashToken } from '../lib/security.js';
+import { signupSchema, email, password, tokenSchema, HttpError, hashPassword, comparePassword, issueSession, sessionUser, cookieOptions, randomToken, hashToken } from '../lib/security.js';
 import { googleRoutes } from './google.js';
 import { RESET_LINK_MINUTES, sendResetEmail } from '../services/mail.js';
 
@@ -35,7 +35,7 @@ export function authRoutes({ models, config, auth }) {
   });
   const login = role => async (req, res) => {
     const data = z.object({ email, password: z.string().min(1).max(200) }).strict().parse(req.body);
-    const user = await models.User.findOne({ email: data.email }).select('+passwordHash');
+    const user = await models.User.findOne({ email: data.email }).select('+passwordHash +googleId');
     // Run a password comparison even when the account does not exist.
     const dummy = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6Ttxqb.yN.gh.jwEq/S6bwbqRk3fu';
     const valid = await comparePassword(data.password, user?.passwordHash || dummy);
@@ -45,7 +45,7 @@ export function authRoutes({ models, config, auth }) {
   };
   router.post('/login', login('user'));
   router.post('/admin/login', login('admin'));
-  router.get('/me', auth, (req, res) => res.json({ user: { _id: String(req.user._id), name: req.user.name, email: req.user.email, role: req.user.role, status: req.user.status, timezone: req.user.timezone, createdAt: req.user.createdAt }, csrf: req.csrf }));
+  router.get('/me', auth, (req, res) => res.json({ user: sessionUser(req.user), csrf: req.csrf }));
   router.post('/logout', auth, (req, res) => { res.clearCookie(config.cookieName, cookieOptions(config)); res.json({ message: 'Signed out.' }); });
   router.post('/forgot-password', async (req, res) => {
     const data = z.object({ email }).strict().parse(req.body);

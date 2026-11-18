@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { password, HttpError, comparePassword, hashPassword, issueSession, publicUser, requireUser } from '../lib/security.js';
+import { password, HttpError, comparePassword, hashPassword, issueSession, sessionUser, requireUser } from '../lib/security.js';
 import { entitlement, activity, usageBucket } from '../services/catalog.js';
 
 export function accountRoutes({ models, config, auth }) {
@@ -8,13 +8,13 @@ export function accountRoutes({ models, config, auth }) {
   router.use(auth);
   router.patch('/profile', async (req, res) => {
     const data = z.object({ name: z.string().trim().min(2).max(80), timezone: z.string().max(100).refine(value => { try { new Intl.DateTimeFormat('en', { timeZone: value }); return true; } catch { return false; } }, 'Choose a valid time zone.') }).strict().parse(req.body);
-    const user = await models.User.findByIdAndUpdate(req.user._id, { $set: data }, { new: true, runValidators: true });
+    const user = await models.User.findByIdAndUpdate(req.user._id, { $set: data }, { new: true, runValidators: true }).select('+googleId');
     await activity(models, req.user._id, 'profile', 'Your profile was updated.');
-    res.json({ user: publicUser(user) });
+    res.json({ user: sessionUser(user) });
   });
   router.patch('/password', async (req, res) => {
     const data = z.object({ currentPassword: z.string().min(1).max(200), password }).strict().parse(req.body);
-    const user = await models.User.findById(req.user._id).select('+passwordHash');
+    const user = await models.User.findById(req.user._id).select('+passwordHash +googleId');
     if (!await comparePassword(data.currentPassword, user.passwordHash)) throw new HttpError(400, 'Your current password is incorrect.');
     user.passwordHash = await hashPassword(data.password); user.sessionVersion += 1;
     await user.save();

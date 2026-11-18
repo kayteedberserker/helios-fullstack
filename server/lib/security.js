@@ -20,12 +20,13 @@ export const equalSecret = (a, b) => typeof a === 'string' && typeof b === 'stri
 export function publicUser(user) {
   return { _id: String(user._id), name: user.name, email: user.email, role: user.role, status: user.status, timezone: user.timezone || 'UTC', createdAt: user.createdAt };
 }
+export const sessionUser = user => ({ ...publicUser(user), googleLinked: Boolean(user.googleId) });
 export const cookieOptions = config => ({ httpOnly: true, secure: config.production, sameSite: config.sameSite, path: '/api' });
 export function issueSession(res, user, config) {
   const csrf = randomToken();
   const token = jwt.sign({ ver: user.sessionVersion, csrf }, config.jwtSecret, { subject: String(user._id), algorithm: 'HS256', expiresIn: '7d', issuer: 'helios-api', audience: 'helios-web' });
   res.cookie(config.cookieName, token, { ...cookieOptions(config), maxAge: 7 * 86400000 });
-  return { user: publicUser(user), csrf };
+  return { user: sessionUser(user), csrf };
 }
 export function requireAuth({ config, models }) {
   return async (req, res, next) => {
@@ -35,7 +36,7 @@ export function requireAuth({ config, models }) {
     try { payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'], issuer: 'helios-api', audience: 'helios-web' }); }
     catch { throw new HttpError(401, 'Your session has expired. Please sign in again.'); }
     if (!objectId.safeParse(payload.sub).success) throw new HttpError(401, 'Invalid session.');
-    const user = await models.User.findById(payload.sub);
+    const user = await models.User.findById(payload.sub, '+googleId');
     if (!user || user.sessionVersion !== payload.ver) throw new HttpError(401, 'Please sign in again.');
     if (user.status !== 'active') throw new HttpError(403, 'Your account is suspended. Contact the Nooky team.');
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !equalSecret(req.get('x-csrf-token'), payload.csrf)) throw new HttpError(403, 'Please refresh the page and try again.');

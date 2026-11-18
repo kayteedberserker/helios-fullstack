@@ -31,6 +31,26 @@ test('private user and administrator routes require a valid session', async () =
 test('a signed customer session cannot read administrator records', async () => {
   const response = await request(makeApp()).get('/api/admin/users').set('Cookie', cookie()); assert.equal(response.status, 403);
 });
+test('self profile reports the saved Google connection without exposing the Google ID', async () => {
+  for (const account of [{ ...user }, { ...user, role: 'admin', googleId: 'private-subject' }, { ...user, googleId: 'private-subject' }]) {
+    const app = makeApp({ models: {
+      User: {
+        findById: async (_, projection) => { assert.match(projection, /\+googleId/); return account; },
+        findByIdAndUpdate: (_, { $set }) => ({ select: async projection => {
+          assert.match(projection, /\+googleId/); return { ...account, ...$set };
+        } }),
+      },
+      Activity: { create: async () => {} },
+    } });
+    const me = await request(app).get('/api/auth/me').set('Cookie', cookie());
+    const save = await writeHeaders(request(app).patch('/api/account/profile')).send({ name: 'Updated name', timezone: 'UTC' });
+    for (const response of [me, save]) {
+      assert.equal(response.status, 200);
+      assert.equal(response.body.user.googleLinked, Boolean(account.googleId));
+      assert.equal(response.body.user.googleId, undefined);
+    }
+  }
+});
 test('password changes and suspensions invalidate existing sessions', async () => {
   const versionChanged = makeApp({ models: { User: { findById: async () => ({ ...user, sessionVersion: 1 }) } } });
   assert.equal((await request(versionChanged).get('/api/auth/me').set('Cookie', cookie())).status, 401);
