@@ -8,11 +8,11 @@ import { createApp } from '../app.js';
 import { readConfig } from '../config.js';
 import { hashPassword, hashToken } from '../lib/security.js';
 
-const config = readConfig({ JWT_SECRET: 's'.repeat(40), PAYSTACK_SECRET_KEY: 'sk_test_demo', CLIENT_URL: 'http://localhost:4173' });
+const config = readConfig({ JWT_SECRET: 's'.repeat(40), PAYSTACK_SECRET_KEY: 'sk_test_demo', FLUTTERWAVE_SECRET_KEY: 'test-secret', FLUTTERWAVE_WEBHOOK_HASH: 'test-hash', FLUTTERWAVE_PLAN_PRICES: '{"pro":{"USD":{"monthly":2500,"yearly":25000}}}', CLIENT_URL: 'http://localhost:4173' });
 const user = { _id: '000000000000000000000021', name: 'Maya', email: 'maya@example.com', role: 'user', status: 'active', timezone: 'UTC', sessionVersion: 0 };
 const csrf = 'this-is-a-test-csrf-secret';
 function cookie(version = 0) { return `helios_session=${jwt.sign({ ver: version, csrf }, config.jwtSecret, { subject: user._id, expiresIn: '1h', issuer: 'helios-api', audience: 'helios-web' })}`; }
-function makeApp(overrides = {}) { return createApp({ config, models: { User: { findById: async () => user }, ...overrides.models }, gateway: overrides.gateway, settlementStore: overrides.settlementStore }); }
+function makeApp(overrides = {}) { return createApp({ config, models: { User: { findById: async () => user }, ...overrides.models }, gateway: overrides.gateway, flutterwave: overrides.flutterwave, settlementStore: overrides.settlementStore }); }
 function writeHeaders(req, token = csrf) { return req.set('Cookie', cookie()).set('Origin', config.clientUrl).set('X-Nooky-Client', '1').set('X-CSRF-Token', token); }
 
 test('private user and administrator routes require a valid session', async () => {
@@ -81,18 +81,63 @@ test('payment verification is scoped to the authenticated owner', async () => {
 test('checkout uses the server price in NGN kobo, never a browser amount', async () => {
   let initialised, saved;
   const plan = { _id: '000000000000000000000002', code: 'pro', name: 'Pro', currency: 'NGN', monthlyPrice: 500000, yearlyPrice: 5000000, responseLimit: 1000 };
-  const app = makeApp({ models: { Plan: { findOne: async () => plan }, Payment: { create: async data => { saved = data; return data; } } }, gateway: { initialise: async data => { initialised = data; return { authorization_url: 'https://checkout.paystack.com/test-checkout' }; } } });
+  const app = makeApp({ models: { Plan: { findOne: async () => plan }, Payment: { create: async data => { saved = data; return data; } } }, flutterwave: { initialise: async data => { initialised = data; return { link: 'https://checkout.flutterwave.com/test-checkout' }; } } });
   const forged = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'monthly', amount: 1 }); assert.equal(forged.status, 400);
-  const valid = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'yearly' });
-  assert.equal(valid.status, 201); assert.equal(initialised.amount, 5000000); assert.equal(initialised.currency, 'NGN'); assert.equal(saved.amount, 5000000); assert.equal(initialised.callback_url, `${config.clientUrl}/payment/callback`);
+  const valid = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'yearly', currency: 'NGN' });
+  assert.equal(valid.status, 201); assert.equal(initialised.amount, 5000000); assert.equal(initialised.currency, 'NGN'); assert.equal(saved.amount, 5000000); assert.equal(saved.provider, 'flutterwave'); assert.equal(initialised.redirectUrl, `${config.clientUrl}/payment/callback?reference=${saved.reference}`);
+  const usd = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'monthly' });
+  assert.equal(usd.status, 201); assert.equal(saved.amount, 2500); assert.equal(initialised.currency, 'USD');
+  assert.equal((await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'monthly', currency: 'GBP' })).status, 400);
 });
-test('new checkout refuses dollar plans, unconfirmed naira prices, and amounts below the NGN minimum', async () => {
+test('admin prices override environment prices for the catalog and checkout', async () => {
+  const plan = { _id: '000000000000000000000002', code: 'pro', name: 'Pro', currency: 'NGN', monthlyPrice: 500000, yearlyPrice: 5000000, responseLimit: 1000, published: true };
+  const adminId = '000000000000000000000022';
+  const adminCookie = `helios_session=${jwt.sign({ ver: 0, csrf }, config.jwtSecret, { subject: adminId, expiresIn: '1h', issuer: 'helios-api', audience: 'helios-web' })}`;
+  const queries = result => ({ select: () => queries(result), sort: () => queries(result), lean: async () => result });
+  const payments = [];
+  const app = makeApp({ models: {
+    User: { findById: async id => id === adminId ? { ...user, _id: adminId, role: 'admin' } : user },
+    Plan: { find: filter => queries(!filter || plan.published ? [plan] : []), findById: async () => plan,
+      findOne: async () => plan.published ? plan : null, findByIdAndUpdate: async (_, { $set }) => Object.assign(plan, $set) },
+    AgentTemplate: { find: () => queries([]) }, AgentInstance: { countDocuments: async () => 0 },
+    Activity: { create: async () => {} }, Payment: { create: async data => (payments.push(data), data) },
+  }, flutterwave: { initialise: async () => ({ link: 'https://checkout.flutterwave.com/test-checkout' }) } });
+  const catalog = () => request(app).get('/api/catalog');
+  const adminCatalog = () => request(app).get('/api/admin/catalog').set('Cookie', adminCookie);
+  const patch = (prices, published = true) => writeHeaders(request(app).patch(`/api/admin/plans/${plan._id}`)).set('Cookie', adminCookie)
+    .send({ name: 'Pro', description: 'An agent for your business.', responseLimit: 1000, features: [], published, prices });
+  const checkout = currency => writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'yearly', currency });
+
+  assert.deepEqual((await adminCatalog()).body.plans[0].prices, { USD: { monthly: 2500, yearly: 25000 }, NGN: { monthly: 500000, yearly: 5000000 } });
+  assert.equal((await checkout('USD')).status, 201);
+  for (const bad of [{ GBP: { monthly: 2200 } }, { EUR: { monthly: 100.5, yearly: 2000 } }, { NGN: { monthly: 4999, yearly: 6000 } }, { CAD: { monthly: 100, yearly: 1000 } }, {}]) {
+    assert.equal((await patch(bad)).status, 400, JSON.stringify(bad));
+  }
+  const prices = { USD: { monthly: 3100, yearly: 31000 }, GBP: { monthly: 2200, yearly: 22000 }, EUR: { monthly: 2500, yearly: 25000 } };
+  assert.equal((await patch(prices)).status, 200);
+  assert.deepEqual((await adminCatalog()).body.plans[0].prices, prices);
+  assert.deepEqual((await catalog()).body.plans[0].prices, prices);
+  assert.equal(plan.monthlyPrice, 0);
+  for (const currency of Object.keys(prices)) {
+    assert.equal((await checkout(currency)).status, 201);
+    assert.equal(payments.at(-1).amount, prices[currency].yearly);
+    assert.equal(payments.at(-1).currency, currency);
+  }
+  assert.equal((await checkout('NGN')).status, 400);
+  assert.equal(payments[0].amount, 25000);
+  assert.equal((await patch({ GBP: prices.GBP })).status, 200);
+  assert.equal((await checkout('USD')).status, 400);
+  assert.equal((await patch({}, false)).status, 200);
+  assert.deepEqual((await adminCatalog()).body.plans[0].prices, {});
+  assert.deepEqual((await catalog()).body.plans, []);
+});
+test('new NGN checkout refuses dollar plans, unconfirmed naira prices, and amounts below the NGN minimum', async () => {
   let writes = 0, requests = 0;
   const plan = { _id: '000000000000000000000002', code: 'pro', name: 'Pro', currency: 'USD', monthlyPrice: 2500, yearlyPrice: 25000, responseLimit: 1000 };
-  const app = makeApp({ models: { Plan: { findOne: async () => plan }, Payment: { create: async data => { writes++; return data; } } }, gateway: { initialise: async () => { requests++; } } });
+  const app = makeApp({ models: { Plan: { findOne: async () => plan }, Payment: { create: async data => { writes++; return data; } } }, flutterwave: { initialise: async () => { requests++; } } });
   for (const change of [{ currency: 'USD' }, { currency: 'NGN', pricingNeedsReview: true }, { currency: 'NGN', pricingNeedsReview: false, monthlyPrice: 4999 }]) {
     Object.assign(plan, change);
-    const response = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'monthly' });
+    const response = await writeHeaders(request(app).post('/api/payments/checkout')).send({ planId: plan._id, period: 'monthly', currency: 'NGN' });
     assert.equal(response.status, 400);
   }
   assert.equal(writes, 0); assert.equal(requests, 0);
@@ -112,4 +157,21 @@ test('unknown API URLs stay JSON 404s, including production SPA fallback', async
   const app = createApp({ config: { ...config, production: true }, models: { User: { findById: async () => user } } });
   const response = await request(app).get('/api/does-not-exist');
   assert.equal(response.status, 404); assert.match(response.headers['content-type'], /application\/json/);
+});
+
+test('Flutterwave webhook requires a valid signature and verifies provider details before applying access', async () => {
+  const reference = 'nooky_flw_' + 'a'.repeat(32);
+  const payment = { reference, provider: 'flutterwave', amount: 2500, currency: 'USD', email: user.email };
+  let applied = 0, currency = 'EUR';
+  const app = makeApp({ flutterwave: { verify: async ref => ({ reference: ref, amount: 2500, currency, customer: { email: user.email }, status: 'success', id: 1, paid_at: new Date().toISOString() }) },
+    settlementStore: { find: async () => payment, apply: async () => { applied++; return payment; } } });
+  const body = JSON.stringify({ event: 'charge.completed', data: { tx_ref: reference, status: 'successful' } });
+  const signature = crypto.createHmac('sha256', config.flutterwaveHash).update(body).digest('base64');
+  const post = () => request(app).post('/api/payments/flutterwave/webhook').set('Content-Type', 'application/json');
+  assert.equal((await post().set('flutterwave-signature', 'wrong').send(body)).status, 401);
+  assert.equal((await post().set('flutterwave-signature', signature).send(body)).status, 409);
+  assert.equal(applied, 0);
+  currency = 'USD';
+  assert.equal((await post().set('flutterwave-signature', signature).send(body)).status, 200);
+  assert.equal(applied, 1);
 });

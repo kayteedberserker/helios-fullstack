@@ -182,7 +182,7 @@ Schemas and indexes are in `server/models/index.js`:
 | Model | Purpose |
 | --- | --- |
 | User | Identity, hashed password, role, status, timezone, session version |
-| Plan | NGN prices, response limits, features, publication |
+| Plan | Prices in USD, NGN, GBP, and EUR; response limits; features; publication |
 | AgentTemplate | Speciality, starter prompts, private system instructions |
 | AgentInstance | One customer's agent, settings, state, conversation lease |
 | Subscription | Current access period and saved allowance |

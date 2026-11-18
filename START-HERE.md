@@ -8,7 +8,7 @@ Existing invited admins can connect their matching Google account in Admin Profi
 
 # NGN currency update
 
-Read NOOKY-SETUP.md. After restarting or redeploying, set your monthly and yearly naira prices in Admin → Agents & plans and publish Pro/Max. Existing USD plan prices are archived and paid checkout is paused until you confirm NGN prices. No exchange rate has been assumed.
+Read NOOKY-SETUP.md and FLUTTERWAVE-SETUP.md. In Admin → Agents & plans, set both prices for each currency you want to offer and publish Pro and Max. Old USD plan prices archived during the NGN migration are kept as history. No exchange rate is applied.
 
 # Nooky setup update
 
@@ -42,3 +42,5 @@ The folder includes every source file, package.json, package-lock.json, public a
 Automated checks: 49 tests passed, and both real-API and demo frontend builds passed. Live MongoDB transactions and browser visual checks were not run in this environment. README contains the full configuration and deployment instructions.
 
 The uploaded archive contains starter/demo environment settings. Copy the working `.env` from your current local project before starting the real app.
+
+New checkout setup: see [FLUTTERWAVE-SETUP.md](FLUTTERWAVE-SETUP.md). Earlier Paystack instructions are for historical transactions.

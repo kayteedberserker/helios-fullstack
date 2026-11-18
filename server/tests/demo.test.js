@@ -15,7 +15,7 @@ test('the demo supports a fresh account, agent creation, chat, personalisation, 
   const fixture = JSON.parse(localStorage.getItem('nooky-preview-ngn-v1'));
   Object.assign(fixture.plans[1], { published: true, pricingNeedsReview: false, currency: 'NGN', monthlyPrice: 500000, yearlyPrice: 5000000 });
   localStorage.setItem('nooky-preview-ngn-v1', JSON.stringify(fixture));
-  const billing = await demoRequest('/payments/checkout', { method: 'POST', body: { planId: demoSeed().plans[1]._id, period: 'monthly' } }); assert.equal(billing.demo, true);
+  const billing = await demoRequest('/payments/checkout', { method: 'POST', body: { planId: demoSeed().plans[1]._id, period: 'monthly', currency: 'NGN' } }); assert.equal(billing.demo, true);
   const dashboard = await demoRequest('/account/dashboard'); assert.equal(dashboard.plan.code, 'pro'); assert.equal(dashboard.usage.responses, 1); assert.equal(dashboard.payments.length, 0);
   assert.equal(localStorage.getItem('nooky-preview-ngn-v1').includes(password), false);
   await demoRequest('/auth/logout', { method: 'POST' }); await assert.rejects(demoRequest('/account/dashboard'));

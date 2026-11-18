@@ -20,9 +20,10 @@ const planSchema = new Schema({
   code: { type: String, required: true, unique: true }, name: { type: String, required: true },
   description: String, monthlyPrice: { type: Number, required: true, min: 0 }, yearlyPrice: { type: Number, required: true, min: 0 },
   responseLimit: { type: Number, required: true, min: 1 }, features: [String], featured: Boolean,
+  prices: Schema.Types.Mixed,
   currency: { type: String, enum: ['NGN'], default: 'NGN' }, pricingNeedsReview: { type: Boolean, default: false },
   legacyPricing: { type: new Schema({ currency: String, monthlyPrice: Number, yearlyPrice: Number }, { _id: false }), select: false }, published: { type: Boolean, default: true },
-}, options);
+}, { ...options, minimize: false });
 
 const templateSchema = new Schema({
   key: { type: String, required: true, unique: true }, name: { type: String, required: true },
@@ -46,7 +47,7 @@ const subscriptionSchema = new Schema({
 const paymentSchema = new Schema({
   userId: ref('User'), planId: ref('Plan'), planCode: String, planName: String, responseLimit: Number,
   period: { type: String, enum: ['monthly', 'yearly'], required: true },
-  amount: { type: Number, required: true }, currency: { type: String, enum: ['NGN', 'USD'], required: true },
+  amount: { type: Number, required: true }, currency: { type: String, enum: ['NGN', 'USD', 'GBP', 'EUR'], required: true },
   email: { type: String, required: true, select: false }, reference: { type: String, unique: true, required: true },
   status: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
   provider: { type: String, default: 'paystack' }, providerId: String, paidAt: Date, appliedAt: Date,

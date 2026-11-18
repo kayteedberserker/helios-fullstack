@@ -1,4 +1,21 @@
+import { currencies } from '../shared/pricing.js';
 import 'dotenv/config';
+
+function planPrices(raw) {
+  if (!raw) return {};
+  try {
+    const prices = JSON.parse(raw), checked = Object.create(null);
+    for (const [plan, row] of Object.entries(prices)) {
+      if (!/^[a-z0-9-]+$/.test(plan) || plan === 'free') throw new Error();
+      checked[plan] = Object.create(null);
+      for (const [currency, periods] of Object.entries(row)) {
+        if (!currencies.includes(currency) || !['monthly', 'yearly'].every(p => Number.isSafeInteger(periods[p]) && periods[p] > 0 && periods[p] <= 100000000)) throw new Error();
+        checked[plan][currency] = { monthly: periods.monthly, yearly: periods.yearly };
+      }
+    }
+    return checked;
+  } catch { throw new Error('FLUTTERWAVE_PLAN_PRICES must contain fixed positive integer minor-unit prices for both periods.'); }
+}
 
 export function readConfig(env = process.env) {
   const production = env.NODE_ENV === 'production';
@@ -12,6 +29,8 @@ export function readConfig(env = process.env) {
     production, clientUrl, port: Number(env.PORT || env.API_PORT || 4000), mongoUri: env.MONGODB_URI || '',
     jwtSecret: env.JWT_SECRET || '', cookieName: 'helios_session', sameSite,
     trustProxy: Number(env.TRUST_PROXY || 0), paystackSecret: (env.PAYSTACK_SECRET_KEY || '').trim(),
+    flutterwaveSecret: (env.FLUTTERWAVE_SECRET_KEY || '').trim(), flutterwaveHash: (env.FLUTTERWAVE_WEBHOOK_HASH || '').trim(),
+    planPrices: planPrices(env.FLUTTERWAVE_PLAN_PRICES),
     googleClientId: (env.GOOGLE_CLIENT_ID || '').trim(), googleClientSecret: (env.GOOGLE_CLIENT_SECRET || '').trim(),
     aiKey: env.AI_API_KEY || '', aiBaseUrl: (env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, ''),
     aiModel: env.AI_MODEL || 'gpt-4.1-mini',

@@ -30,17 +30,17 @@ Keep the actual client secret private. Neither value needs a VITE_ prefix. For t
 
 Nooky checks signed browser state, nonce, PKCE and Google's verified ID token, audience and email before issuing its existing HttpOnly session. Linking requires the same active customer session at both ends of the flow. Google-created accounts use Google to sign in; to add a known password, use the password-reset email flow after SMTP is configured. No Google access or refresh token is stored, and this login feature does not grant Gmail or Drive access.
 
-## Paystack — NGN only
+## Payments
 
-New checkout uses NGN (naira), with integer kobo amounts. Use your sk_test_ secret key locally and in Vercel. No currency environment variable or exchange-rate API is required.
+New checkout uses Flutterwave. Keep the Paystack secret only if you still need to settle checkouts started before the switch. No exchange-rate API is required.
 
 On startup, legacy USD plan prices are archived under legacyPricing and the paid plans are unpublished with pricingNeedsReview=true. Free stays available. This prevents old dollar amounts from being treated as naira or charging an invented exchange rate. Existing payments and purchased subscriptions keep their original records and access.
 
-After redeploying, sign in as admin → Agents & plans → Edit plan. Enter your **monthly and yearly prices in naira**, turn on Available for new purchases, and save. Do this for Pro and Max. The server stores 100 kobo per naira and requires at least ₦50 for each paid period. This is not a new price recommendation; choose your actual business prices. Subsequent restarts preserve those confirmed NGN prices.
+After redeploying, sign in as admin → Agents & plans → Edit plan. Enter 30-day and 365-day prices for one or more currencies (USD, NGN, GBP, EUR), turn on Available for new purchases, and save. Do this for Pro and Max. Keep both fields blank in currencies you do not want to offer. Use your actual business prices, with a minimum of ₦50 per paid period in NGN. See [Flutterwave setup](FLUTTERWAVE-SETUP.md).
 
-Run `npm run payments:check` locally with your test key. It initializes a ₦50 test checkout without taking payment or modifying the application database, and refuses live keys.
+For the legacy Paystack integration only, run `npm run payments:check` locally with your Paystack test key. It initializes a ₦50 test checkout without taking payment or modifying the application database, and refuses live keys.
 
-Keep NODEJS_HELPERS=0 in Vercel for original Paystack webhook bytes. Webhook URL remains https://YOUR-PRODUCTION-DOMAIN/api/payments/webhook. Account/Google settings remain the same. Historical USD records display their saved currency, and the dashboard revenue total includes only NGN so currencies are not added together.
+Keep NODEJS_HELPERS=0 in Vercel for original Paystack webhook bytes. Webhook URL remains https://YOUR-PRODUCTION-DOMAIN/api/payments/webhook. Account/Google settings remain the same. Payment history and dashboard revenue use the saved currency for each transaction.
 
 Official setup references:
 - https://developers.google.com/identity/protocols/oauth2/web-server

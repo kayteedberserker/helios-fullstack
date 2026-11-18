@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { currencies, isPrice, maximumPrice, minimumPrice, planPriceChanges, resolvePlanPrices } from '../../shared/pricing.js';
 import { objectId, email, HttpError, publicUser, requireAdmin, randomToken, hashToken } from '../lib/security.js';
 import { activity, usageBucket } from '../services/catalog.js';
 
@@ -10,6 +11,20 @@ const templateSchema = z.object({
   icon: z.enum(['Sparkles', 'PenLine', 'BriefcaseBusiness', 'Bot', 'Brain', 'Compass']), color: z.enum(['blue', 'purple', 'gold']),
   features: z.array(z.string().trim().min(1).max(100)).max(6), prompts: z.array(z.string().trim().min(1).max(200)).max(4), published: z.boolean(),
 }).strict();
+const planSchema = z.object({
+  name: z.string().trim().min(2).max(50), description: z.string().trim().min(5).max(200),
+  responseLimit: z.number().int().min(1).max(100000),
+  features: z.array(z.string().trim().min(1).max(100)).max(8), published: z.boolean(),
+});
+const pricesSchema = z.object(Object.fromEntries(currencies.map(code => {
+  const amount = z.number().int().min(minimumPrice(code)).max(maximumPrice);
+  return [code, z.object({ monthly: amount, yearly: amount }).strict().optional()];
+}))).strict();
+const legacyAmount = z.number().int().min(0).max(maximumPrice);
+const planUpdateSchema = z.union([
+  planSchema.extend({ prices: pricesSchema }).strict(),
+  planSchema.extend({ monthlyPrice: legacyAmount, yearlyPrice: legacyAmount }).strict(),
+]);
 const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export function adminRoutes({ models, config, auth }) {
   const router = Router();
@@ -18,12 +33,12 @@ export function adminRoutes({ models, config, auth }) {
     const month = new Date(`${usageBucket()}-01T00:00:00.000Z`);
     const [users, agents, revenue, responses, recentPayments, events] = await Promise.all([
       models.User.countDocuments({ role: 'user' }), models.AgentInstance.countDocuments({ status: 'active' }),
-      models.Payment.aggregate([{ $match: { status: 'success', currency: 'NGN', paidAt: { $gte: month } } }, { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }]),
+      models.Payment.aggregate([{ $match: { status: 'success', paidAt: { $gte: month } } }, { $group: { _id: '$currency', total: { $sum: '$amount' }, count: { $sum: 1 } } }]),
       models.Usage.aggregate([{ $match: { bucket: usageBucket() } }, { $group: { _id: null, total: { $sum: '$responses' } } }]),
       models.Payment.find({ status: 'success' }).populate('userId', 'name email').sort({ paidAt: -1 }).limit(5).lean(),
       models.Activity.find().populate('userId', 'name').sort({ createdAt: -1 }).limit(6).lean(),
     ]);
-    res.json({ stats: { users, agents, revenue: revenue[0]?.total || 0, responses: responses[0]?.total || 0, payments: revenue[0]?.count || 0 }, recentPayments, activity: events, services: { database: true, payments: !!config.paystackSecret, ai: !!config.aiKey, mail: !!config.smtp.host && !!config.smtp.from } });
+    res.json({ stats: { users, agents, revenue: revenue.find(row => row._id === 'NGN')?.total || 0, revenueByCurrency: Object.fromEntries(revenue.map(row => [row._id, row.total])), responses: responses[0]?.total || 0, payments: revenue.reduce((total, row) => total + row.count, 0) }, recentPayments, activity: events, services: { database: true, payments: !!config.flutterwaveSecret, ai: !!config.aiKey, mail: !!config.smtp.host && !!config.smtp.from } });
   });
   router.get('/users', async (req, res) => {
     const { page, search } = pageQuery.parse(req.query);
@@ -54,7 +69,7 @@ export function adminRoutes({ models, config, auth }) {
       models.Plan.find().sort({ monthlyPrice: 1 }).lean(),
       models.AgentInstance.countDocuments(),
     ]);
-    res.json({ templates, plans, agents });
+    res.json({ templates, plans: plans.map(plan => ({ ...plan, prices: resolvePlanPrices(plan, config.planPrices) })), agents });
   });
   router.post('/templates', async (req, res) => {
     const data = templateSchema.parse(req.body);
@@ -72,12 +87,22 @@ export function adminRoutes({ models, config, auth }) {
   });
   router.patch('/plans/:id', async (req, res) => {
     const id = objectId.parse(req.params.id);
-    const data = z.object({ name: z.string().trim().min(2).max(50), description: z.string().trim().min(5).max(200), monthlyPrice: z.number().int().min(0).max(100000000), yearlyPrice: z.number().int().min(0).max(100000000), responseLimit: z.number().int().min(1).max(100000), features: z.array(z.string().trim().min(1).max(100)).max(8), published: z.boolean() }).strict().parse(req.body);
+    const { prices: submitted, monthlyPrice, yearlyPrice, ...data } = planUpdateSchema.parse(req.body);
     const current = await models.Plan.findById(id);
     if (!current) throw new HttpError(404, 'Plan not found.');
-    if (current.code === 'free' && (data.monthlyPrice !== 0 || data.yearlyPrice !== 0 || !data.published)) throw new HttpError(400, 'The free plan must stay available with a zero price.');
-    if (current.code !== 'free' && (data.monthlyPrice < 5000 || data.yearlyPrice < 5000)) throw new HttpError(400, 'Paid plans need NGN prices of at least ₦50.00 for each period.');
-    const plan = await models.Plan.findByIdAndUpdate(id, { $set: { ...data, currency: 'NGN', pricingNeedsReview: false } }, { new: true, runValidators: true });
+    let prices = submitted;
+    if (current.code === 'free') {
+      if (!data.published || (submitted && Object.keys(submitted).length) || (submitted === undefined && (monthlyPrice !== 0 || yearlyPrice !== 0))) {
+        throw new HttpError(400, 'The free plan must stay available with a zero price.');
+      }
+      prices = {};
+    } else if (submitted === undefined) {
+      if (!isPrice(monthlyPrice, 'NGN') || !isPrice(yearlyPrice, 'NGN')) throw new HttpError(400, 'Paid plans need NGN prices of at least ₦50.00 for each period.');
+      prices = { ...resolvePlanPrices(current, config.planPrices), NGN: { monthly: monthlyPrice, yearly: yearlyPrice } };
+    }
+    if (current.code !== 'free' && data.published && !Object.keys(prices).length) throw new HttpError(400, 'Add prices in at least one currency before publishing this plan.');
+    const plan = await models.Plan.findByIdAndUpdate(id, { $set: { ...data, ...planPriceChanges(prices) } }, { new: true, runValidators: true });
+    if (!plan) throw new HttpError(404, 'Plan not found.');
     await activity(models, req.user._id, 'admin', `The ${plan.name} plan was updated.`, req.user._id);
     res.json({ plan });
   });

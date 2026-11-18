@@ -1,3 +1,4 @@
+import { currencies, isPrice, maximumPrice, planPriceChanges, pricePeriods, resolvePlanPrices } from '../../shared/pricing.js';
 import { defaultPlans, defaultTemplates } from '../../shared/catalog.js';
 import { demoSupportRequest } from './demoSupport.js';
 
@@ -83,7 +84,11 @@ export async function demoRequest(path, { method = 'GET', body } = {}) {
       (state.messages[user._id] ||= []).push(...messages); state.usage[user._id] = (state.usage[user._id] || 0) + 1; result = { messages, responses: state.usage[user._id] }; event(state, user._id, 'conversation', `You worked with ${agent().name}.`);
     } else if (route === '/payments/checkout') {
       const plan = state.plans.find(p => p._id === body.planId);
-      if (!plan || !plan.published || plan.currency !== 'NGN' || plan.pricingNeedsReview || Math.min(plan.monthlyPrice, plan.yearlyPrice) < 5000) fail('Set and publish NGN plan prices in the admin demo first.');
+      const currency = body.currency ?? 'USD';
+      if (!plan || plan.code === 'free' || !plan.published || !currencies.includes(currency)
+        || !pricePeriods.includes(body.period) || !isPrice(resolvePlanPrices(plan)[currency]?.[body.period], currency)) {
+        fail('This plan is not available in the selected currency.');
+      }
       state.subscriptions = state.subscriptions.filter(s => s.userId !== user._id);
       state.subscriptions.push({ userId: user._id, planCode: plan.code, planName: plan.name, responseLimit: plan.responseLimit, period: body.period, startsAt: now(), endsAt: new Date(Date.now() + (body.period === 'yearly' ? 365 : 30) * 86400000).toISOString() });
       result = { demo: true, message: `Preview switched to ${plan.name}. No payment was processed.` }; event(state, user._id, 'plan', `You previewed the ${plan.name} plan. No payment was processed.`);
@@ -99,7 +104,21 @@ export async function demoRequest(path, { method = 'GET', body } = {}) {
       else if (route === '/admin/catalog') result = { templates: state.templates, plans: state.plans, agents: state.agents.length };
       else if (route === '/admin/templates' && method === 'POST') { const template = { ...body, _id: makeId() }; state.templates.push(template); result = { template }; }
       else if (route.startsWith('/admin/templates/')) { const template = state.templates.find(t => t._id === route.split('/').at(-1)); Object.assign(template, body); result = { template }; }
-      else if (route.startsWith('/admin/plans/')) { const plan = state.plans.find(p => p._id === route.split('/').at(-1)); if (plan.code !== 'free' && body.published && Math.min(body.monthlyPrice, body.yearlyPrice) < 5000) fail('Paid NGN prices must be at least ₦50.'); Object.assign(plan, body, { currency: 'NGN', pricingNeedsReview: false }); result = { plan }; }
+      else if (route.startsWith('/admin/plans/') && method === 'PATCH') {
+        const plan = state.plans.find(p => p._id === route.split('/').at(-1));
+        if (!plan) fail('Plan not found.', 404);
+        const { prices: incoming, monthlyPrice, yearlyPrice, ...changes } = body;
+        const prices = incoming ?? (plan.code === 'free' ? {} : { ...resolvePlanPrices(plan), NGN: { monthly: monthlyPrice, yearly: yearlyPrice } });
+        const codes = Object.keys(prices);
+        if (codes.some(code => !currencies.includes(code) || !pricePeriods.every(period => {
+          const amount = prices[code]?.[period];
+          return isPrice(amount, code) && amount <= maximumPrice;
+        }))) fail('Enter valid prices for both periods in each currency.');
+        if (plan.code === 'free' && (!changes.published || codes.length)) fail('The free plan must stay available with a zero price.');
+        if (plan.code !== 'free' && changes.published && !codes.length) fail('Add prices in at least one currency before publishing this plan.');
+        Object.assign(plan, changes, planPriceChanges(prices));
+        result = { plan };
+      }
       else if (route === '/admin/payments') {
         const status = parsed.searchParams.get('status') || 'all'; const page = Number(parsed.searchParams.get('page') || 1);
         const payments = state.payments.filter(p => status === 'all' || p.status === status).map(p => ({ ...p, userId: state.users.find(u => u._id === p.userId) })); result = { payments: payments.slice((page - 1) * 20, page * 20), total: payments.length, page, pages: Math.max(1, Math.ceil(payments.length / 20)) };

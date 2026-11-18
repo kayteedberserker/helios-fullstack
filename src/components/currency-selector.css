@@ -1,0 +1,104 @@
+.currency-switch {
+  min-width: 0;
+}
+
+.currency-switch-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #556370;
+  font-size: .67rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.currency-segments {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid #e2e9ef;
+  border-radius: 14px;
+  background: #f1f5f8;
+  width: min(100%, 19rem);
+}
+
+.currency-segments > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 7px 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #465769;
+  font-size: .78rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.currency-segments > button:not(:disabled):hover {
+  background: #e5eff9;
+  color: #084d99;
+}
+
+.currency-segments > button[aria-pressed="true"],
+.currency-segments > button[aria-pressed="true"]:not(:disabled):hover {
+  background: #fff;
+  border-color: #c6ddf7;
+  color: #075bb7;
+  box-shadow: 0 1px 3px #14365c15;
+}
+
+.currency-segments > button:focus-visible {
+  outline: 2px solid #087af5;
+  outline-offset: 1px;
+}
+
+.currency-symbol {
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.currency-segments > button:disabled { cursor: default; opacity: .65; }
+
+.pricing-heading .billing-control {
+  display: grid;
+  width: min(100%, 19rem);
+  gap: 11px;
+}
+
+.pricing-heading .billing-toggle button { flex: 1; }
+.pricing-heading .billing-control > span { margin-top: 0; padding-left: 0; text-align: left; }
+.pricing-grid .plan { display: flex; flex-direction: column; min-width: 0; }
+.pricing-grid .plan-top { min-height: 48px; }
+.pricing-grid .plan h3 { min-height: 2.8em; }
+.pricing-grid .price { min-width: 0; font-size: clamp(1.95rem, 3.9vw, 3.2rem); overflow-wrap: anywhere; }
+.pricing-grid .price span { display: block; margin: 4px 0 0; color: #596879; }
+.pricing-grid .price-pending { font-size: clamp(1.45rem, 2.5vw, 1.9rem); letter-spacing: -.04em; }
+.pricing-grid .plan-action { margin-top: 22px; min-height: 48px; }
+.pricing-grid .plan-action .button { margin: 0; }
+.pricing-grid .plan-status {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+  border-radius: 100px;
+  border: 1px solid #e1e7ef;
+  background: #f9fbfd;
+  color: #526477;
+  padding: 8px 13px;
+  font-size: .84rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.hx-billing-currencies { width: min(100%, 19rem); margin: 0 auto 14px; }
+
+@media (max-width: 760px) {
+  .pricing-heading .billing-control, .currency-segments { width: 100%; }
+  .pricing-grid .plan-top { min-height: 0; }
+  .pricing-grid .plan h3 { min-height: 0; }
+}

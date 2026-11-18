@@ -82,5 +82,5 @@ export const faqs = [
   { id: 'free', question: 'Is there a free plan?', answer: 'Yes. Free includes one personal agent and 50 AI responses each calendar month. Pro and Max offer larger response allowances. Limits reset on the first day of each month, UTC.' },
   { id: 'apps', question: 'Can I connect my other apps?', answer: 'App connections are on the roadmap. This first release works inside your Nooky dashboard and does not connect to Gmail, WhatsApp, Slack, or other external apps.' },
   { id: 'approval', question: 'Will it do things without asking me?', answer: 'Your agent provides suggestions, plans, and drafts for you to review. It cannot send emails, make bookings, or perform actions in other apps in this release.' },
-  { id: 'payments', question: 'How do paid plans work?', answer: 'Pay for 30 or 365 days of access in NGN through Paystack. Access renews manually, with no automatic charges. Renewing the same plan extends your access; switching plans starts a new access period immediately.' },
+  { id: 'payments', question: 'How do paid plans work?', answer: 'Pay for 30 or 365 days of access in an available currency through Flutterwave. Access renews manually, with no automatic charges. Renewing the same plan extends your access; switching plans starts a new access period immediately.' },
 ];

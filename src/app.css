@@ -294,6 +294,13 @@
 .hx-section-label>span{font-size:10px;color:#686e70}
 .hx-plans-label{margin-top:39px}
 .hx-admin-plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.hx-admin-price-list{display:grid;gap:5px;margin:0 0 12px;padding:0;font-size:12px}
+.hx-admin-price-list>div{display:flex;justify-content:space-between;gap:8px}
+.hx-admin-price-list dt{font-weight:600}
+.hx-admin-price-list dd{margin:0;font-variant-numeric:tabular-nums}
+.hx-plan-currency-editor{display:grid;gap:12px;padding:14px;background:#f6f8ff;border:1px solid #e0e6fb;border-radius:12px}
+.hx-plan-currency-editor>.hx-muted{margin:0;font-size:11px}
+@media(max-width:370px){.hx-plan-currency-editor .currency-segments>button{gap:2px;padding-inline:1px;font-size:.68rem}.hx-plan-currency-editor .currency-symbol{font-size:.72rem}}
 .hx-admin-plan-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:25px}
 .hx-admin-plan-heading h3{font-size:18px;letter-spacing:-.5px}
 .hx-admin-plan-description{font-size:11px;color:#676d70;margin-top:18px;min-height:36px;line-height:1.75}

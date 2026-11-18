@@ -1,3 +1,5 @@
+import CurrencySelector, { useCurrency } from '../components/CurrencySelector.jsx';
+import { currencies, selectAmount } from '../../shared/pricing.js';
 import { useEffect, useState } from 'react';
 import { MessageCircle, MessagesSquare, Mail, CalendarDays, Hash, FileText, FolderOpen, Inbox, Sun, Plane, BriefcaseBusiness, Gift, Menu, X, Plus, Check, ShieldCheck, Sparkles, ChevronDown } from 'lucide-react';
 import { site, navLinks, looseEnds, conversations, useCases, integrations, customers, plans, faqs } from '../data/content.js';
@@ -102,12 +104,59 @@ function Customers() {
 
 function Pricing() {
   const { user } = useAuth();
+  const [currency, setCurrency] = useCurrency();
   const [billing, setBilling] = useState('monthly');
   const catalog = useResource('/catalog');
-  const pricingPlans = catalog.data?.plans.map(plan => ({ ...plan, id: plan.code, monthly: plan.monthlyPrice / 100, yearly: plan.yearlyPrice / 100, tagline: plan.description })) || plans.filter(plan => plan.published !== false);
+  const livePlans = new Map(catalog.data?.plans.map(plan => [plan.code, plan]) ?? []);
+  // Keep the public tier cards visible even when the checkout catalogue is
+  // loading or an admin has not published a paid tier yet.
+  const pricingPlans = [
+    ...plans.map(plan => ({ ...plan, ...livePlans.get(plan.code) })),
+    ...[...livePlans.values()].filter(plan => !plans.some(tier => tier.code === plan.code)),
+  ];
+  const formatPrice = new Intl.NumberFormat(currency === 'NGN' ? 'en-NG' : 'en-US', {
+    style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 2,
+  });
+  const periodLabel = billing === 'monthly' ? '30 days' : '365 days';
+  const minimum = code => code === 'NGN' ? 5000 : 1;
+  const hasPrice = (plan, code) => Number.isSafeInteger(selectAmount(plan, code, billing)) && selectAmount(plan, code, billing) >= minimum(code);
+
   return <section id="pricing" className="section pricing-section"><div className="container">
-    <div className="pricing-heading"><SectionHeading eyebrow="A little help. Or a whole lot." title={<>Start small.<br />Make room for more.</>} description="Find the kind of support that fits your day." /><div className="billing-control"><div className="billing-toggle" role="group" aria-label="Billing period"><button aria-pressed={billing === 'monthly'} className={billing === 'monthly' ? 'selected' : ''} onClick={() => setBilling('monthly')}>Monthly</button><button aria-pressed={billing === 'yearly'} className={billing === 'yearly' ? 'selected' : ''} onClick={() => setBilling('yearly')}>Yearly</button></div><span>Choose 30 or 365 days of access. Renew manually.</span></div></div>
-    <div className="pricing-grid" aria-live="polite">{pricingPlans.map(plan => <article key={plan.id} className={`plan ${plan.featured ? 'plan-featured' : ''}`}><div className="plan-top"><span className="eyebrow">{plan.name}</span>{plan.featured && <span className="popular-label">The sweet spot</span>}</div><h3>{plan.tagline}</h3><p className="price">₦{(billing === 'monthly' ? plan.monthly : plan.yearly).toLocaleString('en-NG')}<span>{plan.monthly > 0 ? billing === 'monthly' ? '/ 30 days' : '/ 365 days' : ' / forever'}</span></p><p className="plan-description">{plan.description}</p><ButtonLink href={`${user?.role === 'user' ? '/app/dashboard' : '/signup'}?plan=${plan.id}&period=${billing}`} className={plan.featured ? '' : 'button-outline'}>Explore {plan.name}</ButtonLink><ul>{plan.features.map(feature => <li key={feature}><Check size={17} aria-hidden="true" />{feature}</li>)}</ul></article>)}</div>
+    <div className="pricing-heading">
+      <SectionHeading eyebrow="A little help. Or a whole lot." title={<>Start small.<br />Make room for more.</>} description="Find the kind of support that fits your day." />
+      <div className="billing-control">
+        <CurrencySelector currency={currency} onChange={setCurrency} />
+        <div className="billing-toggle" role="group" aria-label="Billing period">
+          {['monthly', 'yearly'].map(period => <button key={period} type="button" aria-pressed={billing === period}
+            className={billing === period ? 'selected' : ''} onClick={() => setBilling(period)}>
+            {period === 'monthly' ? 'Monthly' : 'Yearly'}
+          </button>)}
+        </div>
+        <span>Choose 30 or 365 days of access. Renew manually.</span>
+      </div>
+    </div>
+    <div className="pricing-grid" aria-live="polite">{pricingPlans.map(plan => {
+      const free = plan.code === 'free';
+      const livePlan = livePlans.get(plan.code);
+      const available = !!livePlan && hasPrice(livePlan, currency);
+      const otherCurrency = livePlan && currencies.find(code => code !== currency && hasPrice(livePlan, code));
+      const priceLabel = free ? 'Free' : available ? formatPrice.format(selectAmount(livePlan, currency, billing) / 100)
+        : otherCurrency ? 'Unavailable' : catalog.loading ? 'Checking prices…' : 'Pricing unavailable';
+      const href = `${user?.role === 'user' ? '/app/dashboard' : '/signup'}?${new URLSearchParams({ plan: plan.code, period: billing })}`;
+      return <article key={plan.code} className={`plan ${plan.featured ? 'plan-featured' : ''}`}>
+        <div className="plan-top"><span className="eyebrow">{plan.name}</span>{plan.featured && <span className="popular-label">The sweet spot</span>}</div>
+        <h3>{plan.description}</h3>
+        <p className={`price ${!free && !available ? 'price-pending' : ''}`}>
+          {priceLabel}<span>{free ? 'Forever' : available ? `/ ${periodLabel}` : otherCurrency ? `in ${currency}` : periodLabel}</span>
+        </p>
+        <div className="plan-action">
+          {free || available ? <ButtonLink href={href} className={plan.featured ? '' : 'button-outline'}>Explore {plan.name}</ButtonLink>
+            : otherCurrency ? <button className="button button-outline" type="button" onClick={() => setCurrency(otherCurrency)}>View in {otherCurrency}</button>
+            : <span className="plan-status">Checkout unavailable</span>}
+        </div>
+        <ul>{plan.features.map(feature => <li key={feature}><Check size={17} aria-hidden="true" />{feature}</li>)}</ul>
+      </article>;
+    })}</div>
   </div></section>;
 }
 

@@ -29,7 +29,7 @@ export function accountRoutes({ models, config, auth }) {
       models.Activity.find({ userId }).sort({ createdAt: -1 }).limit(6).lean(),
       models.Payment.find({ userId }).sort({ createdAt: -1 }).limit(20).lean(),
     ]);
-    res.json({ ...access, usage: { responses: usage?.responses || 0, limit: access.plan.responseLimit, bucket: usageBucket() }, agent, activity: events, payments, capabilities: { ai: !!config.aiKey, payments: !!config.paystackSecret } });
+    res.json({ ...access, usage: { responses: usage?.responses || 0, limit: access.plan.responseLimit, bucket: usageBucket() }, agent, activity: events, payments, capabilities: { ai: !!config.aiKey, payments: !!config.flutterwaveSecret } });
   });
   return router;
 }

@@ -1,3 +1,7 @@
+import { resolvePlanPrices } from '../shared/pricing.js';
+import { createHmac } from 'node:crypto';
+import { createFlutterwave } from './lib/flutterwave.js';
+import { equalSecret } from './lib/security.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -19,7 +23,7 @@ import { adminRoutes } from './routes/admin.js';
 import { supportRoutes, adminSupportRoutes } from './routes/support.js';
 import { mongoSupportStore } from './services/support-store.js';
 
-export function createApp({ config, serveStatic = config.production, models = defaultModels, gateway = createPaystack(config.paystackSecret), ai = createAI(config), settlementStore = mongoSettlementStore(models), supportStore = mongoSupportStore(models) }) {
+export function createApp({ config, serveStatic = config.production, models = defaultModels, gateway = createPaystack(config.paystackSecret), flutterwave = createFlutterwave(config.flutterwaveSecret), ai = createAI(config), settlementStore = mongoSettlementStore(models), supportStore = mongoSupportStore(models) }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
@@ -42,14 +46,30 @@ export function createApp({ config, serveStatic = config.production, models = de
     // Acknowledge only after durable processing; failures are retried by Paystack.
     res.sendStatus(200);
   });
+  app.post('/api/payments/flutterwave/webhook', express.raw({ type: 'application/json', limit: '256kb' }), async (req, res) => {
+    if (!config.flutterwaveHash || !config.flutterwaveSecret) throw new HttpError(503, 'Flutterwave webhooks are not configured.');
+    const signature = req.get('flutterwave-signature');
+    const authenticated = Buffer.isBuffer(req.body) && (signature
+      ? equalSecret(signature, createHmac('sha256', config.flutterwaveHash).update(req.body).digest('base64'))
+      : equalSecret(req.get('verif-hash'), config.flutterwaveHash));
+    if (!authenticated) throw new HttpError(401, 'Invalid signature.');
+    let event;
+    try { event = JSON.parse(req.body.toString('utf8')); } catch { throw new HttpError(400, 'Invalid webhook JSON.'); }
+    const reference = event?.data?.tx_ref;
+    if (event?.event === 'charge.completed' && event.data?.status === 'successful' && /^nooky_flw_[a-f\d]{32}$/.test(reference || '')) {
+      const payment = await settlementStore.find(reference);
+      if (payment?.provider === 'flutterwave') await settlePayment(reference, { verify: flutterwave.verify, store: settlementStore });
+    }
+    res.sendStatus(200);
+  });
   app.use('/api', rateLimit({ windowMs: 15 * 60000, limit: 300, skip: req => req.method === 'GET' && /^\/(?:admin\/)?support(?:\/|$)/.test(req.path), standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Too many requests. Please try again shortly.' } }));
   app.use('/api', express.json({ limit: '32kb' }), clientRequestGuard(config));
   const auth = requireAuth({ config, models });
   const chatLimit = rateLimit({ windowMs: 60000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Give your agent a moment. Try again shortly.' } });
-  const dependencies = { config, models, auth, gateway, ai, settlementStore, chatLimit, supportStore };
+  const dependencies = { config, models, auth, gateway, flutterwave, ai, settlementStore, chatLimit, supportStore };
   app.get('/api/catalog', async (req, res) => {
     const [plans, templates] = await Promise.all([models.Plan.find({ published: true }).sort({ monthlyPrice: 1 }).lean(), models.AgentTemplate.find({ published: true }).sort({ createdAt: 1 }).lean()]);
-    res.json({ plans, templates });
+    res.json({ plans: plans.map(plan => ({ ...plan, prices: resolvePlanPrices(plan, config.planPrices) })), templates });
   });
   app.use('/api/auth', rateLimit({ windowMs: 15 * 60000, limit: 35, skip: req => req.path === '/me' || req.path === '/logout', standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Too many account requests. Please try again in 15 minutes.' } }), authRoutes(dependencies));
   app.use('/api/account', accountRoutes(dependencies));
