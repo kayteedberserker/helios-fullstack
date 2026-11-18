@@ -26,7 +26,7 @@ const planUpdateSchema = z.union([
   planSchema.extend({ monthlyPrice: legacyAmount, yearlyPrice: legacyAmount }).strict(),
 ]);
 const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-export function adminRoutes({ models, config, auth }) {
+export function adminRoutes({ models, config, auth, adminBilling }) {
   const router = Router();
   router.use(auth, requireAdmin);
   router.get('/dashboard', async (req, res) => {
@@ -108,10 +108,26 @@ export function adminRoutes({ models, config, auth }) {
   });
   router.get('/payments', async (req, res) => {
     const { page } = pageQuery.parse(req.query);
-    const status = z.enum(['all', 'pending', 'success', 'failed']).default('all').parse(req.query.status);
-    const filter = status === 'all' ? {} : { status };
+    const status = z.enum(['all', 'pending', 'success', 'failed', 'review']).default('all').parse(req.query.status);
+    const filter = status === 'all' ? {} : status === 'review'
+      ? { status: 'success', reviewReason: { $ne: null } }
+      : { status, ...(status === 'pending' ? { supersededAt: null } : {}), ...(status === 'success' ? { reviewReason: null } : {}) };
     const [payments, total] = await Promise.all([models.Payment.find(filter).populate('userId', 'name email').sort({ createdAt: -1 }).skip((page - 1) * 20).limit(20).lean(), models.Payment.countDocuments(filter)]);
     res.json({ payments, total, page, pages: Math.max(1, Math.ceil(total / 20)) });
+  });
+  const reason = z.string().trim().min(5).max(240);
+  router.get('/payments/:id', async (req, res) => res.json(await adminBilling.read(objectId.parse(req.params.id))));
+  router.post('/payments/:id/verify', async (req, res) => {
+    z.object({}).strict().parse(req.body ?? {});
+    res.json(await adminBilling.verify(objectId.parse(req.params.id)));
+  });
+  router.post('/payments/:id/fail', async (req, res) => {
+    const data = z.object({ reason }).strict().parse(req.body);
+    res.json(await adminBilling.markFailed(objectId.parse(req.params.id), data, req.user._id));
+  });
+  router.post('/payments/:id/cancel-subscription', async (req, res) => {
+    const data = z.object({ reason, revision: z.iso.datetime() }).strict().parse(req.body);
+    res.json(await adminBilling.cancelSubscription(objectId.parse(req.params.id), data, req.user._id));
   });
   return router;
 }

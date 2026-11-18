@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { z } from 'zod';
 import { signupSchema, email, password, tokenSchema, HttpError, hashPassword, comparePassword, issueSession, cookieOptions, randomToken, hashToken } from '../lib/security.js';
 import { googleRoutes } from './google.js';
-import { sendResetEmail } from '../services/mail.js';
+import { RESET_LINK_MINUTES, sendResetEmail } from '../services/mail.js';
 
 export function authRoutes({ models, config, auth }) {
   const router = Router();
@@ -53,7 +53,7 @@ export function authRoutes({ models, config, auth }) {
     const user = await models.User.findOne({ email: data.email, status: 'active' });
     if (user) {
       const token = randomToken();
-      await models.PasswordReset.findOneAndUpdate({ userId: user._id }, { tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 30 * 60000) }, { upsert: true });
+      await models.PasswordReset.findOneAndUpdate({ userId: user._id }, { tokenHash: hashToken(token), expiresAt: new Date(Date.now() + RESET_LINK_MINUTES * 60000) }, { upsert: true });
       try { await sendResetEmail(config, data.email, token); }
       catch { console.error('Password reset email delivery failed.'); }
     }

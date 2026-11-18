@@ -7,7 +7,7 @@ const payment = { reference: `helios_${'a'.repeat(32)}`, amount: 2500, currency:
 const paid = { reference: payment.reference, amount: 2500, currency: 'USD', status: 'success', id: 1234, paid_at: '2026-10-08T10:00:00Z', customer: { email: 'maya@example.com' } };
 test('only a matching successful payment can grant access', () => {
   assert.doesNotThrow(() => validatePaidTransaction(payment, paid));
-  for (const change of [{ status: 'failed' }, { amount: 2499 }, { amount: '2500' }, { currency: 'NGN' }, { reference: 'someone-elses-payment' }, { customer: { email: 'someone@example.com' } }, { id: null }, { paid_at: 'not-a-date' }]) {
+  for (const change of [{ status: 'failed' }, { amount: 2499 }, { amount: '2500' }, { currency: 'NGN' }, { reference: 'someone-elses-payment' }, { customer: { email: 'someone@example.com' } }, { id: null }, { paid_at: null }, { paid_at: 'not-a-date' }]) {
     assert.throws(() => validatePaidTransaction(payment, { ...paid, ...change }));
   }
 });

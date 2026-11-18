@@ -1,3 +1,4 @@
+import { planChange, subscriptionPeriod } from '../../shared/billing.js';
 import { currencies, isPrice, maximumPrice, planPriceChanges, pricePeriods, resolvePlanPrices } from '../../shared/pricing.js';
 import { defaultPlans, defaultTemplates } from '../../shared/catalog.js';
 import { demoSupportRequest } from './demoSupport.js';
@@ -89,8 +90,12 @@ export async function demoRequest(path, { method = 'GET', body } = {}) {
         || !pricePeriods.includes(body.period) || !isPrice(resolvePlanPrices(plan)[currency]?.[body.period], currency)) {
         fail('This plan is not available in the selected currency.');
       }
+      const current = state.subscriptions.find(s => s.userId === user._id);
+      const change = planChange(current, plan.code);
+      if (!change.allowed) fail(change.kind === 'renew' ? 'Renewal is available in the last 7 days.' : 'Wait for your current plan to expire before choosing a lower tier.', 409);
+      const dates = subscriptionPeriod(current, { planCode: plan.code, period: body.period });
       state.subscriptions = state.subscriptions.filter(s => s.userId !== user._id);
-      state.subscriptions.push({ userId: user._id, planCode: plan.code, planName: plan.name, responseLimit: plan.responseLimit, period: body.period, startsAt: now(), endsAt: new Date(Date.now() + (body.period === 'yearly' ? 365 : 30) * 86400000).toISOString() });
+      state.subscriptions.push({ userId: user._id, planCode: plan.code, planName: plan.name, responseLimit: plan.responseLimit, period: body.period, startsAt: new Date(dates.startsAt).toISOString(), endsAt: dates.endsAt.toISOString() });
       result = { demo: true, message: `Preview switched to ${plan.name}. No payment was processed.` }; event(state, user._id, 'plan', `You previewed the ${plan.name} plan. No payment was processed.`);
     } else if (route.startsWith('/support/') || route === '/admin/support' || route.startsWith('/admin/support/')) {
       result = demoSupportRequest(state, user, parsed, method, body);
@@ -119,9 +124,16 @@ export async function demoRequest(path, { method = 'GET', body } = {}) {
         Object.assign(plan, changes, planPriceChanges(prices));
         result = { plan };
       }
+      else if (route.startsWith('/admin/payments/') && method === 'GET') {
+        const payment = state.payments.find(row => row._id === route.split('/').at(-1));
+        if (!payment) fail('Payment not found.', 404);
+        const subscription = state.subscriptions.find(row => row.userId === payment.userId);
+        result = { payment: { ...payment, provider: 'flutterwave' }, customer: state.users.find(row => row._id === payment.userId),
+          subscription: subscription && { ...subscription, active: !subscription.endsAt || new Date(subscription.endsAt) > new Date() }, history: [] };
+      }
       else if (route === '/admin/payments') {
         const status = parsed.searchParams.get('status') || 'all'; const page = Number(parsed.searchParams.get('page') || 1);
-        const payments = state.payments.filter(p => status === 'all' || p.status === status).map(p => ({ ...p, userId: state.users.find(u => u._id === p.userId) })); result = { payments: payments.slice((page - 1) * 20, page * 20), total: payments.length, page, pages: Math.max(1, Math.ceil(payments.length / 20)) };
+        const payments = state.payments.filter(p => status === 'all' || (status === 'review' ? !!p.reviewReason : p.status === status && !p.reviewReason && (status !== 'pending' || !p.supersededAt))).map(p => ({ ...p, userId: state.users.find(u => u._id === p.userId) })); result = { payments: payments.slice((page - 1) * 20, page * 20), total: payments.length, page, pages: Math.max(1, Math.ceil(payments.length / 20)) };
       } else if (route === '/admin/invites') result = { url: `${location.origin}/admin/signup?email=${encodeURIComponent(body.email)}&token=preview-only-not-a-real-invite`, expiresAt: new Date(Date.now() + 48 * 3600000).toISOString() };
       else fail('Demo action not found.');
     } else fail('This action is not available in the demo.');

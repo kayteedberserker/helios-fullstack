@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { models as defaultModels } from './models/index.js';
 import { createPaystack, settlePayment, validWebhookSignature } from './lib/payments.js';
 import { createAI } from './services/ai.js';
+import { mongoAdminBilling } from './services/admin-billing.js';
 import { mongoSettlementStore } from './services/settlement-store.js';
 import { HttpError, requireAuth, clientRequestGuard, errorHandler } from './lib/security.js';
 import { authRoutes } from './routes/auth.js';
@@ -23,7 +24,7 @@ import { adminRoutes } from './routes/admin.js';
 import { supportRoutes, adminSupportRoutes } from './routes/support.js';
 import { mongoSupportStore } from './services/support-store.js';
 
-export function createApp({ config, serveStatic = config.production, models = defaultModels, gateway = createPaystack(config.paystackSecret), flutterwave = createFlutterwave(config.flutterwaveSecret), ai = createAI(config), settlementStore = mongoSettlementStore(models), supportStore = mongoSupportStore(models) }) {
+export function createApp({ config, serveStatic = config.production, models = defaultModels, gateway = createPaystack(config.paystackSecret), flutterwave = createFlutterwave(config.flutterwaveSecret), ai = createAI(config), settlementStore = mongoSettlementStore(models, { disableCheckout: flutterwave.disableCheckout }), supportStore = mongoSupportStore(models), adminBilling = mongoAdminBilling(models, { settlementStore, flutterwave, gateway }) }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
@@ -66,7 +67,7 @@ export function createApp({ config, serveStatic = config.production, models = de
   app.use('/api', express.json({ limit: '32kb' }), clientRequestGuard(config));
   const auth = requireAuth({ config, models });
   const chatLimit = rateLimit({ windowMs: 60000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Give your agent a moment. Try again shortly.' } });
-  const dependencies = { config, models, auth, gateway, flutterwave, ai, settlementStore, chatLimit, supportStore };
+  const dependencies = { config, models, auth, gateway, flutterwave, ai, settlementStore, chatLimit, supportStore, adminBilling };
   app.get('/api/catalog', async (req, res) => {
     const [plans, templates] = await Promise.all([models.Plan.find({ published: true }).sort({ monthlyPrice: 1 }).lean(), models.AgentTemplate.find({ published: true }).sort({ createdAt: 1 }).lean()]);
     res.json({ plans: plans.map(plan => ({ ...plan, prices: resolvePlanPrices(plan, config.planPrices) })), templates });
@@ -81,6 +82,9 @@ export function createApp({ config, serveStatic = config.production, models = de
   app.use('/api', (req, res) => res.status(404).json({ message: 'API route not found.' }));
   if (serveStatic) {
     const dist = fileURLToPath(new URL('../dist/', import.meta.url));
+    app.get('/', (req, res) => res.sendFile(path.join(dist, 'home.html')));
+    app.get(['/privacy', '/privacy-policy'], (req, res) => res.sendFile(path.join(dist, 'privacy.html')));
+    app.get(['/terms', '/terms-of-service'], (req, res) => res.sendFile(path.join(dist, 'terms.html')));
     app.use(express.static(dist));
     // Express 5 uses a named wildcard. This also serves direct React Router URLs.
     app.get('/{*path}', (req, res) => res.sendFile(path.join(dist, 'index.html')));

@@ -22,7 +22,7 @@ test('privacy identifies Google login permissions, AI processing, payment and ri
 test('Vercel serves public legal HTML before the SPA fallback while preserving API priority', async () => {
   const config = JSON.parse(await readFile(new URL('../../vercel.json', import.meta.url)));
   assert.equal(config.routes[0].dest, '/api/index.js');
-  for (const [path, destination] of [['/privacy', '/privacy.html'], ['/privacy-policy', '/privacy.html'], ['/terms', '/terms.html'], ['/terms-of-service', '/terms.html']]) {
+  for (const [path, destination] of [['/', '/home.html'], ['/privacy', '/privacy.html'], ['/privacy-policy', '/privacy.html'], ['/terms', '/terms.html'], ['/terms-of-service', '/terms.html']]) {
     const route = config.routes.find(r => r.src && new RegExp(`^${r.src}$`).test(path));
     assert.equal(route.dest, destination);
   }

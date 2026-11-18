@@ -7,27 +7,48 @@ export function validWebhookSignature(rawBody, signature, secret) {
   return crypto.timingSafeEqual(expected, Buffer.from(signature, 'hex'));
 }
 
-export function validatePaidTransaction(payment, transaction) {
-  if (!transaction || transaction.status !== 'success') throw new HttpError(409, 'Payment has not been completed yet. You can check again shortly.');
-  if (transaction.reference !== payment.reference || transaction.amount !== payment.amount || transaction.currency !== payment.currency || transaction.customer?.email?.toLowerCase() !== payment.email.toLowerCase()) {
-    throw new HttpError(409, 'Payment details do not match this purchase. Contact support.');
-  }
-  if (!transaction.id || !Number.isFinite(new Date(transaction.paid_at).getTime())) throw new HttpError(409, 'The payment provider returned incomplete payment details.');
+const normalizeEmail = value => typeof value === 'string' ? value.trim().toLowerCase() : '';
+const safeCurrency = value => typeof value === 'string' && /^[A-Z]{3}$/.test(value) ? value : null;
+const safeAmount = value => Number.isSafeInteger(value) ? value : null;
+
+function paymentMismatches(payment, transaction) {
+  // Flutterwave's merchant-verified reference identifies the saved purchase;
+  // its checkout email is payer contact information, not Nooky account ownership.
+  const expectedEmail = normalizeEmail(payment.email);
+  const reportedEmail = normalizeEmail(transaction.customer?.email);
+  const emailMismatch = payment.provider !== 'flutterwave' && (!expectedEmail || reportedEmail !== expectedEmail);
+  return [
+    transaction.reference !== payment.reference && 'reference',
+    !Number.isSafeInteger(transaction.amount) || transaction.amount !== payment.amount ? 'amount' : false,
+    transaction.currency !== payment.currency && 'currency',
+    emailMismatch && 'customer_email',
+  ].filter(Boolean);
 }
 
-export function subscriptionPeriod(current, payment, now = new Date()) {
-  const end = current?.endsAt && new Date(current.endsAt);
-  const renew = current?.planCode === payment.planCode && end > now;
-  const start = renew ? end : now;
-  return { startsAt: renew ? current.startsAt : now, endsAt: new Date(start.getTime() + (payment.period === 'yearly' ? 365 : 30) * 86400000) };
+export function validatePaidTransaction(payment, transaction) {
+  if (!transaction || transaction.status !== 'success') throw new HttpError(409, 'Payment has not been completed yet. You can check again shortly.');
+  const fields = paymentMismatches(payment, transaction);
+  if (fields.length) {
+    console.warn('[PAYMENT] verification mismatch', {
+      provider: payment.provider === 'flutterwave' ? 'flutterwave' : 'paystack',
+      fields,
+      ...(fields.includes('amount') ? { expectedMinor: safeAmount(payment.amount), reportedMinor: safeAmount(transaction.amount) } : {}),
+      ...(fields.includes('currency') ? { expectedCurrency: safeCurrency(payment.currency), reportedCurrency: safeCurrency(transaction.currency) } : {}),
+      ...(fields.includes('customer_email') ? { customerEmailPresent: !!normalizeEmail(transaction.customer?.email) } : {}),
+    });
+    throw new HttpError(409, 'Payment details do not match this purchase. Contact support.');
+  }
+  if (!transaction.id || !transaction.paid_at || !Number.isFinite(new Date(transaction.paid_at).getTime())) throw new HttpError(409, 'The payment provider returned incomplete payment details.');
 }
+
+export { subscriptionPeriod } from '../../shared/billing.js';
 
 export async function settlePayment(reference, { verify, store }) {
   const payment = await store.find(reference);
   if (!payment) throw new HttpError(404, 'Payment not found.');
-  if (payment.appliedAt) return payment;
+  if (payment.appliedAt || payment.reviewReason) return payment;
   const transaction = await verify(reference);
-  if (['failed', 'abandoned'].includes(transaction?.status) && transaction.reference === payment.reference && transaction.amount === payment.amount && transaction.currency === payment.currency && transaction.customer?.email?.toLowerCase() === payment.email.toLowerCase()) {
+  if (['failed', 'abandoned'].includes(transaction?.status) && paymentMismatches(payment, transaction).length === 0) {
     await store.recordFailure(reference);
     throw new HttpError(409, 'This payment was not completed. Return to your dashboard to start a new checkout.');
   }

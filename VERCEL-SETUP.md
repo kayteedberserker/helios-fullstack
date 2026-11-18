@@ -57,3 +57,11 @@ In Vercel's Logs view, select the correct project, Production environment, deplo
 49 automated tests and the real-API production build passed locally. Tests cover startup sharing and recovery, safe logs, raw webhook signatures, JSON errors, and API route priority as well as the existing application features. No authenticated Vercel deployment, browser QA or live Atlas transaction was run here; use /api/health and your deployment logs to validate the hosted environment.
 
 Express rate limits currently use per-process memory. Vercel instances do not share those counters; use a shared rate-limit store before relying on them as a global production traffic limit. In the default deployment, support uses polling rather than persistent sockets.
+
+### Public pages for Google OAuth review
+
+Deploy with `npm run build` so the public homepage and standalone privacy policy are generated. In Google Auth Platform → Branding, use `https://nooky.io/` for the homepage and `https://nooky.io/privacy` for the privacy policy. The public homepage links to that same policy. Set `VITE_SUPPORT_EMAIL` to the public privacy contact and `VITE_LEGAL_ENTITY` to your actual legal entity before building.
+
+Before resubmitting, open both URLs while signed out of Vercel and Nooky. Each must load without a login, access challenge, or redirect to a preview host. If neither opens, check that the custom domain points to the production deployment under **Settings → Domains**. If a Vercel login appears, check **Security → Deployment Protection** for the production domain. Keep app authentication on protected in-app routes.
+
+Password-reset messages use your existing server SMTP settings. On production, set `CLIENT_URL` to `https://nooky.io` so the button in the email returns to Nooky. Test with **Forgot password** from an account you control.

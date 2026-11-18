@@ -16,6 +16,10 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/",
+      "dest": "/home.html"
+    },
+    {
       "src": "/privacy(?:-policy)?/?",
       "dest": "/privacy.html"
     },

@@ -166,7 +166,7 @@ function Faq() {
 }
 
 function Footer() {
-  return <><section className="closing-section"><div className="container"><p className="eyebrow">You have better things to do.</p><h2>{site.footer}</h2><p>Let the little things take up a little less space.</p><ButtonLink className="button-white"><MessageCircle size={19} aria-hidden="true" />{site.hero.cta}</ButtonLink></div></section><footer className="footer"><div className="container"><div className="footer-top"><div><Brand /><p>{site.tagline}</p></div><nav aria-label="Footer navigation">{navLinks.map(link => <a key={link.id} href={`#${link.id}`}>{link.label}</a>)}</nav></div><div className="footer-bottom"><span>© {new Date().getFullYear()} {site.name}. Made for the everyday.</span><LegalLinks /><a href="#top">Back to top</a></div></div></footer></>;
+  return <><section className="closing-section"><div className="container"><p className="eyebrow">You have better things to do.</p><h2>{site.footer}</h2><p>Let the little things take up a little less space.</p><ButtonLink className="button-white"><MessageCircle size={19} aria-hidden="true" />{site.hero.cta}</ButtonLink></div></section><footer className="footer"><div className="container"><div className="footer-top"><div><Brand /><p>{site.tagline}</p><p className="footer-google-note">Google Sign-In uses your name, email address, and Google account ID to create, link, or sign in to your Nooky account.</p></div><nav aria-label="Footer navigation">{navLinks.map(link => <a key={link.id} href={`#${link.id}`}>{link.label}</a>)}</nav></div><div className="footer-bottom"><span>© {new Date().getFullYear()} {site.name}. Made for the everyday.</span><LegalLinks /><a href="#top">Back to top</a></div></div></footer></>;
 }
 
 export default function LandingPage() {

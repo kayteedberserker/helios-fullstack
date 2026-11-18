@@ -14,6 +14,7 @@ const userSchema = new Schema({
   googleId: { type: String, unique: true, sparse: true, select: false },
   timezone: { type: String, default: 'UTC' },
   sessionVersion: { type: Number, default: 0 },
+  billingRevision: { type: Number, select: false },
 }, options);
 
 const planSchema = new Schema({
@@ -41,7 +42,7 @@ const instanceSchema = new Schema({
 const subscriptionSchema = new Schema({
   userId: { ...ref('User'), unique: true }, planId: ref('Plan'), planCode: String, planName: String,
   responseLimit: Number, period: { type: String, enum: ['monthly', 'yearly'] },
-  startsAt: { type: Date, default: Date.now }, endsAt: { type: Date, default: null }, lastPaymentId: { type: Schema.Types.ObjectId, ref: 'Payment' },
+  startsAt: { type: Date, default: Date.now }, endsAt: { type: Date, default: null }, cancelledAt: Date, lastPaymentId: { type: Schema.Types.ObjectId, ref: 'Payment' },
 }, options);
 
 const paymentSchema = new Schema({
@@ -51,6 +52,10 @@ const paymentSchema = new Schema({
   email: { type: String, required: true, select: false }, reference: { type: String, unique: true, required: true },
   status: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
   provider: { type: String, default: 'paystack' }, providerId: String, paidAt: Date, appliedAt: Date,
+  basePaymentId: { type: Schema.Types.ObjectId, select: false }, baseCancelledAt: { type: Date, select: false }, checkoutUrl: { type: String, select: false },
+  providerCheck: { type: new Schema({ checkedAt: Date, status: String, transactionId: String, providerReference: String,
+    reference: String, amount: Number, chargedAmount: Number, currency: String, method: String, transactionDate: Date }, { _id: false }), select: false },
+  supersededAt: Date, checkoutExpiresAt: Date, reviewReason: { type: String, enum: ['checkout_replaced', 'renewal_too_early', 'active_higher_plan'] },
 }, options);
 paymentSchema.index({ userId: 1, createdAt: -1 });
 
@@ -83,8 +88,12 @@ supportMessageSchema.index({ threadId: 1, clientId: 1 }, { unique: true });
 
 const usageSchema = new Schema({ userId: ref('User'), bucket: { type: String, required: true }, responses: { type: Number, default: 0 } }, options);
 usageSchema.index({ userId: 1, bucket: 1 }, { unique: true });
-const activitySchema = new Schema({ userId: ref('User'), actorId: { type: Schema.Types.ObjectId, ref: 'User' }, kind: String, text: String }, options);
+const activitySchema = new Schema({ userId: ref('User'), actorId: { type: Schema.Types.ObjectId, ref: 'User' }, kind: String, text: String,
+  billingPaymentId: { type: Schema.Types.ObjectId, ref: 'Payment', select: false },
+  billingNote: { type: String, select: false },
+}, options);
 activitySchema.index({ userId: 1, createdAt: -1 });
+activitySchema.index({ billingPaymentId: 1, createdAt: -1 }, { sparse: true });
 
 const inviteSchema = new Schema({ email: { type: String, required: true }, tokenHash: { type: String, required: true, unique: true }, invitedBy: { type: Schema.Types.ObjectId, ref: 'User' }, expiresAt: { type: Date, required: true }, usedAt: Date }, options);
 inviteSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

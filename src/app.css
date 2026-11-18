@@ -389,3 +389,21 @@
 @media(max-width:650px){.hx-panel-title p{font-size:11px}.hx-field>label{font-size:11px}.hx-table{font-size:11px}.hx-table th{font-size:10px}.hx-activity p{font-size:11px}}
 
 .hx-google-signin{margin:18px 0}.hx-google-signin p{text-align:center;font-size:11px;color:#596974;margin:12px 0;line-height:1.7}
+
+.hx-payment-open{min-height:32px;padding:6px 10px;font-size:10px}
+.hx-payment-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hx-payment-detail-heading h3,.hx-payment-detail-section h3,.hx-payment-action-form h3{margin:0;font-size:14px}
+.hx-payment-detail-heading p,.hx-payment-action-note{margin:5px 0 0;font-size:12px;color:#59656f}
+.hx-payment-detail-section{border-top:1px solid #e6edf3;margin-top:16px;padding-top:14px}
+.hx-payment-detail-section .hx-button,.hx-payment-detail-actions .hx-button{min-height:34px;padding:7px 11px;font-size:11px}
+.hx-payment-details-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:10px 20px;margin:12px 0 0}
+.hx-payment-details-grid dt{font-size:10px;color:#566879;margin-bottom:4px}
+.hx-payment-details-grid dd{margin:0;font-size:12px;overflow-wrap:anywhere}
+.hx-payment-reference,.hx-payment-action-note,.hx-payment-detail-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hx-payment-reference code{overflow-wrap:anywhere}
+.hx-payment-detail-actions{margin-top:14px}
+.hx-payment-detail-actions .hx-muted,.hx-payment-detail-section .hx-muted{font-size:11px}
+.hx-payment-action-form{margin-top:14px;padding:14px;background:#f3f7fc;border-radius:12px}
+.hx-payment-action-form p,.hx-payment-audit{font-size:12px;margin:0}
+.hx-payment-audit{padding-left:18px}
+.hx-payment-audit li{margin-top:10px}

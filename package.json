@@ -14,7 +14,8 @@
     "db:check": "node server/scripts/check-db.js",
     "seed": "node server/scripts/seed.js",
     "admin:invite": "node server/scripts/admin-invite.js",
-    "payments:check": "node server/scripts/check-payments.js"
+    "payments:check": "node server/scripts/check-payments.js",
+    "flutterwave:check": "node server/scripts/check-flutterwave.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
